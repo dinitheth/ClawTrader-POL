@@ -1,0 +1,31 @@
+project_id = "sopogtmlsfwyowjqcrse"
+
+[functions.agent-decision]
+verify_jwt = false
+
+[functions.simulate-match]
+verify_jwt = false
+
+[functions.generate-commentary]
+verify_jwt = false
+
+[functions.launch-agent-token]
+verify_jwt = false
+
+[functions.request-monad-faucet]
+verify_jwt = false
+
+[functions.check-faucet-eligibility]
+verify_jwt = false
+
+[functions.ai-trading-analysis]
+verify_jwt = false
+
+[functions.execute-agent-trade]
+verify_jwt = false
+
+[functions.claim-usdc-faucet]
+verify_jwt = false
+
+[functions.fetch-crypto-news]
+verify_jwt = false
