@@ -1,11 +1,10 @@
 /**
  * Auto-Settlement Server for BettingEscrow
- * 
- * EFFICIENT DESIGN (adapted for Monad testnet):
- *   - Monad RPC does NOT support eth_newFilter or large eth_getLogs ranges
- *   - Instead: scans recent 100 blocks for BetPlaced events each cycle
- *   - Only queries PandaScore for matches that have on-chain bets
- *   - Polls every 2 minutes → ~0-5 PandaScore API calls per cycle (max)
+ *
+ * Polls Polygon Amoy for BetPlaced events and settles matches via PandaScore.
+ *   - Scans recent 499 blocks per cycle (Polygon Amoy supports larger ranges)
+ *   - Only queries PandaScore for matches with on-chain bets
+ *   - Polls every 2 minutes → ~0-5 PandaScore API calls per cycle
  *   - Frontend uses ~60 req/hr → combined total stays well under 900/hr
  * 
  * Run: node server/settlement-server.js
@@ -19,12 +18,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // ── Config ──────────────────────────────────────────────────────
-const RPC_URL = process.env.MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz';
-const BETTING_ESCROW_ADDRESS = '0x41d521347068B09bfFE2E2bba9946FC9368c6A17';
+const RPC_URL = process.env.POLYGON_AMOY_RPC_URL || 'https://polygon-amoy.drpc.org';
+const BETTING_ESCROW_ADDRESS = '0x67aa0a2f7d07ae923be91af870ac192d95f59ff2'; // Polygon Amoy
 const PANDASCORE_TOKEN = 'QlP9wl3Oh5Zl97LiUyFy7HSQ1L4NIZ0McJMYoXf904QIJGoE0bk';
 const PANDASCORE_BASE = 'https://api.pandascore.co';
 const POLL_INTERVAL_MS = 120_000;  // 2 minutes
-const LOG_SCAN_RANGE = 99;         // Monad limits eth_getLogs to 100 blocks
+const LOG_SCAN_RANGE = 499;        // Polygon Amoy supports up to 500 blocks
 
 // ── ABI ─────────────────────────────────────────────────────────
 const ESCROW_ABI = [
@@ -84,7 +83,7 @@ async function scanRecentEvents() {
         // Nothing new to scan
         if (fromBlock > currentBlock) return;
 
-        // Chunk into 99-block ranges (Monad limit)
+        // Chunk into 499-block ranges (Polygon Amoy limit)
         for (let start = fromBlock; start <= currentBlock; start += LOG_SCAN_RANGE) {
             const end = Math.min(start + LOG_SCAN_RANGE - 1, currentBlock);
 
@@ -213,7 +212,7 @@ async function pollAndSettle() {
             const winnerId = match.winner_id;
             if (BigInt(winnerId) === onChain.teamAId || BigInt(winnerId) === onChain.teamBId) {
                 await settleMatchOnChain(matchId, winnerId, match.name || `Match #${matchId}`);
-                await new Promise(r => setTimeout(r, 2000)); // Nonce safety
+                await new Promise(r => setTimeout(r, 2000)); // Nonce safety (Polygon Amoy)
             } else {
                 log('error', `Winner mismatch for ${matchId}`, {
                     pandaWinner: winnerId,
@@ -254,7 +253,7 @@ async function start() {
     try {
         log('info', `Wallet: ${wallet.address}`);
         const bal = await provider.getBalance(wallet.address);
-        log('info', `MON balance: ${ethers.formatEther(bal)} MON`);
+        log('info', `MATIC balance: ${ethers.formatEther(bal)} MATIC`);
     } catch (err) {
         log('error', 'Wallet connection failed', { error: err.message });
         process.exit(1);
