@@ -13,7 +13,7 @@ export const CONTRACTS = {
   // AgentVaultV2 - Real on-chain trading via operatorBuy/operatorSell on SimpleDEX
   // Old vault: 0xec5945e2d22659fecc4c23269e478fbceb7814ce (no operator trading)
   AGENT_VAULT: {
-    address: '0xd192Bc275CA3d014A9ff2753D1DCA888c70f0537' as `0x${string}`,
+    address: '0x4Dff05F148Ab7DaB7547a81AF78edC1da7603b43' as `0x${string}`,
   },
 
   // VaultB - Holds USDC for profit distribution

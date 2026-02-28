@@ -25,7 +25,7 @@ app.use(express.json());
 // Contract addresses (Polygon Amoy testnet — deployed 2026-02-24)
 const CONTRACTS = {
     USDC: '0xb045a5a95b592d701ce39100f4866a1168abd331',
-    AGENT_VAULT_V2: '0xd192Bc275CA3d014A9ff2753D1DCA888c70f0537', // AgentVaultV2 — real operatorBuy/operatorSell
+    AGENT_VAULT_V2: '0x4Dff05F148Ab7DaB7547a81AF78edC1da7603b43', // AgentVaultV2 — real operatorBuy/operatorSell
     SIMPLE_DEX: '0xe531866c621248dc7c098cedbdb1977562f96bf5',
     TEST_BTC: '0xebb1df177e9ceb8e95dbd775cf7a1fce51fe7fdd',
     TEST_ETH: '0x7f3997ec44746e81acbe4a764e49b4d23fbf8fd5',
@@ -75,9 +75,9 @@ const provider = new ethers.JsonRpcProvider(
     process.env.POLYGON_AMOY_RPC_URL || 'https://polygon-amoy.drpc.org'
 );
 const wallet = new ethers.Wallet(process.env.TRADING_WALLET_PRIVATE_KEY, provider);
-const agentVaultContract = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_ABI,   wallet);
-const simpleDexContract  = new ethers.Contract(CONTRACTS.SIMPLE_DEX,      SIMPLE_DEX_ABI,  wallet);
-const usdcContract       = new ethers.Contract(CONTRACTS.USDC,             ERC20_ABI,       wallet);
+const agentVaultContract = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_ABI, wallet);
+const simpleDexContract = new ethers.Contract(CONTRACTS.SIMPLE_DEX, SIMPLE_DEX_ABI, wallet);
+const usdcContract = new ethers.Contract(CONTRACTS.USDC, ERC20_ABI, wallet);
 
 console.log(`🔑 Trading wallet: ${wallet.address}`);
 
@@ -690,7 +690,7 @@ async function getAgentPositions(userAddress, agentId) {
 
     // Check in-memory open position
     const pos = agentPositions[agentId];
-    const tokenAmount   = pos ? pos.amount : 0;
+    const tokenAmount = pos ? pos.amount : 0;
     const tokenValueUSD = pos ? pos.amount * pos.currentPrice : 0;
 
     return {
@@ -708,25 +708,39 @@ async function getAgentPositions(userAddress, agentId) {
  */
 app.post('/api/smart-trade', async (req, res) => {
     try {
-        const { symbol, agentId, userAddress, agentDNA } = req.body;
-
-        console.log(`\n${'='.repeat(60)}`);
-        console.log(`🧠 SMART TRADE for ${symbol}`);
-        console.log(`   Agent: ${agentId}`);
-        console.log(`   User: ${userAddress}`);
+        // Accept both 'coinId' (from Trading.tsx) and 'symbol' (legacy)
+        const { agentId, userAddress, agentDNA } = req.body;
+        const rawId = req.body.coinId || req.body.symbol || '';
 
         if (!agentId || !userAddress) {
             return res.status(400).json({ error: 'agentId and userAddress required' });
         }
 
-        const tokenInfo = TOKENS[symbol];
+        // Normalize: map chart symbols like 'BTCUSDT' → 'bitcoin'
+        const symbolToCoinId = {
+            'BTCUSDT': 'bitcoin', 'BTC': 'bitcoin', 'BITCOIN': 'bitcoin',
+            'ETHUSDT': 'ethereum', 'ETH': 'ethereum', 'ETHEREUM': 'ethereum',
+            'SOLUSDT': 'solana', 'SOL': 'solana', 'SOLANA': 'solana',
+            // Already correct
+            'bitcoin': 'bitcoin', 'ethereum': 'ethereum', 'solana': 'solana',
+        };
+        const coinId = symbolToCoinId[rawId?.toUpperCase()] ||
+            symbolToCoinId[rawId] ||
+            rawId?.toLowerCase() ||
+            'bitcoin';
+
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`🧠 SMART TRADE: coinId=${coinId} | Agent: ${agentId?.slice(0, 8)}... | User: ${userAddress?.slice(0, 10)}...`);
+
+        const tokenInfo = TOKENS[coinId];
         if (!tokenInfo) {
-            return res.status(400).json({ error: 'Unsupported token', symbol });
+            console.error(`❌ Unsupported token: rawId='${rawId}' coinId='${coinId}'`);
+            return res.status(400).json({ error: 'Unsupported token', coinId, supported: Object.keys(TOKENS) });
         }
 
         // 1. Fetch market data
-        console.log(`📊 Fetching market data for ${symbol}...`);
-        const marketData = await fetchMarketData(symbol);
+        console.log(`📊 Fetching market data for ${coinId}...`);
+        const marketData = await fetchMarketData(coinId);
         if (!marketData) {
             return res.status(500).json({ error: 'Failed to fetch market data' });
         }
@@ -784,7 +798,7 @@ app.post('/api/smart-trade', async (req, res) => {
                         const [expectedOut] = await simpleDexContract.getBuyQuote(tokenInfo.address, buyAmountWei);
                         const minOut = expectedOut * 95n / 100n; // 5% slippage
 
-                        console.log(`⚡ BUY: $${buyAmount.toFixed(2)} vault USDC → ${tokenInfo.symbol} (user: ${userAddress.slice(0,10)}...)`);
+                        console.log(`⚡ BUY: $${buyAmount.toFixed(2)} vault USDC → ${tokenInfo.symbol} (user: ${userAddress.slice(0, 10)}...)`);
 
                         // operatorBuy: vault takes USDC from user's balance, swaps on DEX
                         // Gas wallet pays MATIC — user's USDC funds the trade
@@ -830,7 +844,7 @@ app.post('/api/smart-trade', async (req, res) => {
                     const [expectedUSDC] = await simpleDexContract.getSellQuote(pos.tokenAddress, tokenAmountWei);
                     const minUSDC = expectedUSDC * 95n / 100n;
 
-                    console.log(`⚡ SELL: ${pos.amount.toFixed(6)} ${pos.token} → USDC (user: ${userAddress.slice(0,10)}...)`);
+                    console.log(`⚡ SELL: ${pos.amount.toFixed(6)} ${pos.token} → USDC (user: ${userAddress.slice(0, 10)}...)`);
 
                     // operatorSell: vault sells stored tokens, credits USDC back to user's balance
                     const tx = await agentVaultContract.operatorSell(
