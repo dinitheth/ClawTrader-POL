@@ -593,23 +593,27 @@ const Trading = () => {
 
         <div className="container mx-auto px-4 py-4 md:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-            {/* Left Column: Chart + Recent Trades */}
-            <div className="lg:col-span-2 space-y-4 md:space-y-6">
-              {/* Chart */}
+            {/* Left Column: Chart + Latest AI Decision */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Chart — shorter so AI Decision fits below */}
               <Card className="overflow-hidden">
-                <div className="h-[300px] md:h-[400px]">
+                <div className="h-[260px] md:h-[310px]">
                   <TradingViewChart
                     symbol={symbol}
                     interval={chartInterval}
                     theme={theme === 'dark' ? 'dark' : 'light'}
-                    height={400}
+                    height={310}
                     autosize={true}
                   />
                 </div>
               </Card>
 
-              {/* Recent Trades - Below Chart */}
-              <RecentTrades trades={trades} tradePnLMap={pnlData.tradePnLMap} />
+              {/* Latest AI Decision — now below chart on left */}
+              <LatestDecisionCard
+                decision={decision}
+                agentName={selectedAgent?.name}
+                timestamp={analysisHistory[0]?.timestamp}
+              />
             </div>
 
             {/* Right Panel */}
@@ -812,32 +816,26 @@ const Trading = () => {
                 </CardContent>
               </Card>
 
-              {/* Agent Portfolio card removed - balance now shown in agent selector */}
-
-              {/* Latest AI Decision - Under Agent Box */}
-              <LatestDecisionCard
-                decision={decision}
-                agentName={selectedAgent?.name}
-                timestamp={analysisHistory[0]?.timestamp}
-              />
+              {/* Recent Trades — now below agent controls on right */}
+              <RecentTrades trades={trades} tradePnLMap={pnlData.tradePnLMap} />
 
               {/* No Balance Warning */}
               {selectedAgent && onChainBalance <= 0 && !decision && (
                 <Card className="border-warning/30 bg-warning/5">
-                  <CardContent className="py-3 md:py-4">
-                    <div className="flex items-start gap-2 md:gap-3">
-                      <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0 mt-0.5" />
+                  <CardContent className="py-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-warning text-sm md:text-base">Fund Your Agent</p>
-                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                        <p className="font-medium text-warning text-sm">Fund Your Agent</p>
+                        <p className="text-xs text-muted-foreground mt-1">
                           Add USDC to your agent's vault to enable autonomous trading.
                         </p>
                         <Button
                           onClick={() => setShowFundModal(true)}
                           size="sm"
-                          className="mt-2 md:mt-3 gap-1 md:gap-2 text-xs md:text-sm"
+                          className="mt-2 gap-1 text-xs"
                         >
-                          <Wallet className="w-3 h-3 md:w-4 md:h-4" />
+                          <Wallet className="w-3 h-3" />
                           Fund Agent Now
                         </Button>
                       </div>
