@@ -25,7 +25,7 @@ app.use(express.json());
 // Contract addresses (Polygon Amoy testnet — deployed 2026-02-24)
 const CONTRACTS = {
     USDC: '0xb045a5a95b592d701ce39100f4866a1168abd331',
-    AGENT_VAULT_V2: '0xec5945e2d22659fecc4c23269e478fbceb7814ce',
+    AGENT_VAULT_V2: '0xd192Bc275CA3d014A9ff2753D1DCA888c70f0537', // AgentVaultV2 — real operatorBuy/operatorSell
     SIMPLE_DEX: '0xe531866c621248dc7c098cedbdb1977562f96bf5',
     TEST_BTC: '0xebb1df177e9ceb8e95dbd775cf7a1fce51fe7fdd',
     TEST_ETH: '0x7f3997ec44746e81acbe4a764e49b4d23fbf8fd5',
@@ -39,27 +39,35 @@ const TOKENS = {
     solana: { address: CONTRACTS.TEST_SOL, decimals: 9, symbol: 'tSOL' },
 };
 
-// AgentVault ABI (Polygon Amoy)
-const AGENT_VAULT_V2_ABI = [
+// AgentVaultV2 ABI — real operator trading using vault USDC
+const AGENT_VAULT_ABI = [
     'function deposit(bytes32 agentId, uint256 amount) external',
     'function withdraw(bytes32 agentId, uint256 amount) external',
     'function getUserAgentBalance(address user, bytes32 agentId) external view returns (uint256)',
     'function getUserAgents(address user) external view returns (bytes32[])',
     'function getAgentTotalBalance(bytes32 agentId) external view returns (uint256)',
-    'function simulateTrade(bytes32 agentId, address user, int256 pnl) external',
-    'function operator() external view returns (address)',
+    'function getTokenPosition(address user, bytes32 agentId, address token) external view returns (uint256)',
+    // Operator trading — uses VAULT USDC directly, gas wallet pays MATIC
+    'function operatorBuy(bytes32 agentId, address user, address tokenOut, uint256 usdcAmount, uint256 minTokens) external returns (uint256 tokensReceived)',
+    'function operatorSell(bytes32 agentId, address user, address tokenIn, uint256 tokenAmount, uint256 minUSDC) external returns (uint256 usdcReceived)',
 ];
 
-// SimpleDEX ABI
+// SimpleDEX ABI — real token swaps
 const SIMPLE_DEX_ABI = [
+    'function buyToken(address tokenOut, uint256 amountIn, uint256 minAmountOut) external returns (uint256 amountOut)',
+    'function sellToken(address tokenIn, uint256 amountIn, uint256 minAmountOut) external returns (uint256 amountOut)',
+    'function getBuyQuote(address tokenOut, uint256 amountIn) external view returns (uint256 amountOut, uint256 fee)',
+    'function getSellQuote(address tokenIn, uint256 amountIn) external view returns (uint256 amountOut, uint256 fee)',
     'function updatePrice(address token, uint256 newPrice) external',
-    'function updatePrices(address[] calldata tokens, uint256[] calldata prices) external',
     'function tokenPrices(address token) external view returns (uint256)',
-    'function supportedTokens(address token) external view returns (bool)',
+    'function isTokenSupported(address token) external view returns (bool)',
+    'function getPoolBalance(address token) external view returns (uint256)',
 ];
 
 const ERC20_ABI = [
     'function balanceOf(address account) external view returns (uint256)',
+    'function approve(address spender, uint256 amount) external returns (bool)',
+    'function allowance(address owner, address spender) external view returns (uint256)',
 ];
 
 // Setup provider and wallet (Polygon Amoy)
@@ -67,10 +75,11 @@ const provider = new ethers.JsonRpcProvider(
     process.env.POLYGON_AMOY_RPC_URL || 'https://polygon-amoy.drpc.org'
 );
 const wallet = new ethers.Wallet(process.env.TRADING_WALLET_PRIVATE_KEY, provider);
-const agentVaultContract = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_V2_ABI, wallet);
+const agentVaultContract = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_ABI,   wallet);
 const simpleDexContract  = new ethers.Contract(CONTRACTS.SIMPLE_DEX,      SIMPLE_DEX_ABI,  wallet);
+const usdcContract       = new ethers.Contract(CONTRACTS.USDC,             ERC20_ABI,       wallet);
 
-console.log(`🔑 Trading wallet (operator): ${wallet.address}`);
+console.log(`🔑 Trading wallet: ${wallet.address}`);
 
 // Track open positions per agent: agentId → { token, amount, entryPrice, entryUSDC }
 const agentPositions = {};
@@ -739,7 +748,6 @@ app.post('/api/smart-trade', async (req, res) => {
         console.log(`   Risk: ${decision.riskAssessment}`);
 
         // ─── 4. ORACLE PRICE UPDATE ────────────────────────────────────────
-        // Push CoinGecko live price to SimpleDEX so on-chain trades use real prices
         try {
             const priceInUSDC = BigInt(Math.round(marketData.currentPrice * 1e6));
             const updateTx = await simpleDexContract.updatePrice(tokenInfo.address, priceInUSDC, {
@@ -747,83 +755,111 @@ app.post('/api/smart-trade', async (req, res) => {
                 maxFeePerGas: BigInt(60_000_000_000),
             });
             await updateTx.wait();
-            console.log(`💹 Price updated on-chain: $${marketData.currentPrice.toFixed(2)}`);
+            console.log(`💹 Oracle price updated: $${marketData.currentPrice.toFixed(2)}`);
         } catch (priceErr) {
-            console.warn(`⚠️  Price update skipped: ${priceErr.message?.slice(0, 80)}`);
+            console.warn(`⚠️  Price update skipped: ${priceErr.message?.slice(0, 60)}`);
         }
 
-        // ─── 5. ON-CHAIN EXECUTION VIA simulateTrade ─────────────────────
+        // ─── 5. REAL DEX EXECUTION ────────────────────────────────────────
         let txHash = null;
         let newBalance = positions.usdcBalance;
         let tokensTraded = 0;
         let tradeError = null;
+
+        const GAS_OPTS = {
+            maxPriorityFeePerGas: BigInt(30_000_000_000),
+            maxFeePerGas: BigInt(60_000_000_000),
+        };
 
         if (decision.action !== 'HOLD' && decision.confidence >= 55) {
             const agentIdBytes32 = uuidToBytes32(agentId);
             const pos = agentPositions[agentId];
 
             if (decision.action === 'BUY' && positions.usdcBalance >= 3 && !positions.hasPosition) {
-                // Calculate buy amount (% of available cash)
                 const buyAmount = positions.usdcBalance * (decision.suggestedAmount / 100);
                 if (buyAmount >= 3) {
-                    const tokensReceived = buyAmount / marketData.currentPrice;
-                    // Record open position in memory
-                    agentPositions[agentId] = {
-                        token: tokenInfo.symbol,
-                        tokenAddress: tokenInfo.address,
-                        amount: tokensReceived,
-                        entryPrice: marketData.currentPrice,
-                        currentPrice: marketData.currentPrice,
-                        entryUSDC: buyAmount,
-                    };
-                    // Call simulateTrade with -buyAmount (USDC leaves balance)
-                    const pnlWei = -BigInt(Math.round(buyAmount * 1e6));
+                    const buyAmountWei = BigInt(Math.round(buyAmount * 1e6));
                     try {
-                        const tx = await agentVaultContract.simulateTrade(agentIdBytes32, userAddress, pnlWei, {
-                            maxPriorityFeePerGas: BigInt(30_000_000_000),
-                            maxFeePerGas: BigInt(60_000_000_000),
-                        });
+                        // Get quote first
+                        const [expectedOut] = await simpleDexContract.getBuyQuote(tokenInfo.address, buyAmountWei);
+                        const minOut = expectedOut * 95n / 100n; // 5% slippage
+
+                        console.log(`⚡ BUY: $${buyAmount.toFixed(2)} vault USDC → ${tokenInfo.symbol} (user: ${userAddress.slice(0,10)}...)`);
+
+                        // operatorBuy: vault takes USDC from user's balance, swaps on DEX
+                        // Gas wallet pays MATIC — user's USDC funds the trade
+                        const tx = await agentVaultContract.operatorBuy(
+                            agentIdBytes32,
+                            userAddress,
+                            tokenInfo.address,
+                            buyAmountWei,
+                            minOut,
+                            GAS_OPTS
+                        );
                         const receipt = await tx.wait();
                         txHash = receipt.hash;
-                        tokensTraded = tokensReceived;
+                        const tokensOut = parseFloat(ethers.formatUnits(expectedOut, tokenInfo.decimals));
+                        tokensTraded = tokensOut;
+
+                        // Record open position in memory
+                        agentPositions[agentId] = {
+                            token: tokenInfo.symbol,
+                            tokenAddress: tokenInfo.address,
+                            decimals: tokenInfo.decimals,
+                            amount: tokensOut,
+                            entryPrice: marketData.currentPrice,
+                            currentPrice: marketData.currentPrice,
+                            entryUSDC: buyAmount,
+                        };
+
+                        newBalance = positions.usdcBalance - buyAmount;
                         recordTrade(agentId, 'BUY');
-                        console.log(`✅ BUY executed on-chain! $${buyAmount.toFixed(2)} USDC → ${tokensReceived.toFixed(6)} ${tokenInfo.symbol} | Tx: ${txHash}`);
+                        console.log(`✅ REAL BUY on-chain! $${buyAmount.toFixed(2)} vault USDC → ${tokensOut.toFixed(6)} ${tokenInfo.symbol} | Tx: ${txHash}`);
+
                     } catch (err) {
                         tradeError = err.message;
-                        delete agentPositions[agentId];
-                        console.error(`❌ BUY simulateTrade failed:`, err.message);
+                        console.error(`❌ operatorBuy failed:`, err.message?.slice(0, 150));
                     }
                 }
-            } else if (decision.action === 'SELL' && pos) {
-                // Calculate P&L from open position
-                pos.currentPrice = marketData.currentPrice;
-                const currentValueUSD = pos.amount * marketData.currentPrice;
-                const pnlUSD = currentValueUSD - pos.entryUSDC; // can be + or -
-                const pnlWei = BigInt(Math.round(pnlUSD * 1e6));
 
+            } else if (decision.action === 'SELL' && pos) {
                 try {
-                    const tx = await agentVaultContract.simulateTrade(agentIdBytes32, userAddress, pnlWei, {
-                        maxPriorityFeePerGas: BigInt(30_000_000_000),
-                        maxFeePerGas: BigInt(60_000_000_000),
-                    });
+                    pos.currentPrice = marketData.currentPrice;
+                    const tokenAmountWei = BigInt(Math.round(pos.amount * 10 ** pos.decimals));
+
+                    const [expectedUSDC] = await simpleDexContract.getSellQuote(pos.tokenAddress, tokenAmountWei);
+                    const minUSDC = expectedUSDC * 95n / 100n;
+
+                    console.log(`⚡ SELL: ${pos.amount.toFixed(6)} ${pos.token} → USDC (user: ${userAddress.slice(0,10)}...)`);
+
+                    // operatorSell: vault sells stored tokens, credits USDC back to user's balance
+                    const tx = await agentVaultContract.operatorSell(
+                        agentIdBytes32,
+                        userAddress,
+                        pos.tokenAddress,
+                        tokenAmountWei,
+                        minUSDC,
+                        GAS_OPTS
+                    );
                     const receipt = await tx.wait();
                     txHash = receipt.hash;
                     tokensTraded = pos.amount;
+
+                    const receivedUSDC = parseFloat(ethers.formatUnits(expectedUSDC, 6));
+                    const pnlUSD = receivedUSDC - pos.entryUSDC;
                     const pnlSign = pnlUSD >= 0 ? '+' : '';
-                    delete agentPositions[agentId]; // close position
+                    newBalance = positions.usdcBalance + receivedUSDC;
+
+                    delete agentPositions[agentId];
                     recordTrade(agentId, 'SELL');
-                    console.log(`✅ SELL executed on-chain! P&L: ${pnlSign}$${pnlUSD.toFixed(2)} | Tx: ${txHash}`);
+                    console.log(`✅ REAL SELL on-chain! P&L: ${pnlSign}$${pnlUSD.toFixed(2)} | Tx: ${txHash}`);
+
                 } catch (err) {
                     tradeError = err.message;
-                    console.error(`❌ SELL simulateTrade failed:`, err.message);
+                    console.error(`❌ operatorSell failed:`, err.message?.slice(0, 150));
                 }
             }
 
-            // Refresh balance after execution
-            if (txHash) {
-                const newPositions = await getAgentPositions(userAddress, agentId);
-                newBalance = newPositions.usdcBalance;
-            }
         }
 
         res.json({
