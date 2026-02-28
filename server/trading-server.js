@@ -39,14 +39,23 @@ const TOKENS = {
     solana: { address: CONTRACTS.TEST_SOL, decimals: 9, symbol: 'tSOL' },
 };
 
-// AgentVaultV2 ABI (Polygon Amoy)
+// AgentVault ABI (Polygon Amoy)
 const AGENT_VAULT_V2_ABI = [
     'function deposit(bytes32 agentId, uint256 amount) external',
     'function withdraw(bytes32 agentId, uint256 amount) external',
     'function getUserAgentBalance(address user, bytes32 agentId) external view returns (uint256)',
     'function getUserAgents(address user) external view returns (bytes32[])',
     'function getAgentTotalBalance(bytes32 agentId) external view returns (uint256)',
-    'function usdc() external view returns (address)',
+    'function simulateTrade(bytes32 agentId, address user, int256 pnl) external',
+    'function operator() external view returns (address)',
+];
+
+// SimpleDEX ABI
+const SIMPLE_DEX_ABI = [
+    'function updatePrice(address token, uint256 newPrice) external',
+    'function updatePrices(address[] calldata tokens, uint256[] calldata prices) external',
+    'function tokenPrices(address token) external view returns (uint256)',
+    'function supportedTokens(address token) external view returns (bool)',
 ];
 
 const ERC20_ABI = [
@@ -58,8 +67,13 @@ const provider = new ethers.JsonRpcProvider(
     process.env.POLYGON_AMOY_RPC_URL || 'https://polygon-amoy.drpc.org'
 );
 const wallet = new ethers.Wallet(process.env.TRADING_WALLET_PRIVATE_KEY, provider);
+const agentVaultContract = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_V2_ABI, wallet);
+const simpleDexContract  = new ethers.Contract(CONTRACTS.SIMPLE_DEX,      SIMPLE_DEX_ABI,  wallet);
 
 console.log(`🔑 Trading wallet (operator): ${wallet.address}`);
+
+// Track open positions per agent: agentId → { token, amount, entryPrice, entryUSDC }
+const agentPositions = {};
 
 // Convert UUID to bytes32
 function uuidToBytes32(uuid) {
@@ -454,13 +468,13 @@ function makeSmartDecision(marketData, positions, agentDNA, agentId) {
 
     // Constants
     const MIN_TRADE_USDC = 3;              // Never trade less than $3
-    const MAX_TRADES_PER_SESSION = 5;      // Max 5 trades before manual reset
-    const TRADE_COOLDOWN_MS = 5 * 60_000;  // 5-minute cooldown between trades
-    const MIN_CONFIDENCE = 65;             // Minimum confidence to act
-    const BUY_SCORE_THRESHOLD = 4.0;      // Pro: weighted score needed to BUY
-    const SELL_SCORE_THRESHOLD = 3.0;      // Pro: weighted score needed to SELL
-    const MIN_BUY_SIGNALS = 3;            // Pro: minimum confirming modules
-    const MIN_SELL_SIGNALS = 2;
+    const MAX_TRADES_PER_SESSION = 50;     // High limit — let the engine trade freely
+    const TRADE_COOLDOWN_MS = 60_000;      // 60s cooldown (matches 30s frontend loop)
+    const MIN_CONFIDENCE = 55;             // Lower bar so more decisions pass
+    const BUY_SCORE_THRESHOLD = 2.0;      // Relaxed: 2 weighted signals enough to BUY
+    const SELL_SCORE_THRESHOLD = 1.5;     // Relaxed: 1-2 sell signals enough to SELL
+    const MIN_BUY_SIGNALS = 2;            // Minimum confirming buy modules
+    const MIN_SELL_SIGNALS = 1;           // Minimum confirming sell modules
 
     // DNA adjusts the pro threshold (±1 range)
     const effectiveBuyThreshold = BUY_SCORE_THRESHOLD - aggressionFactor * 0.8;
@@ -660,20 +674,22 @@ async function fetchMarketData(symbol) {
 /**
  * Get agent's positions from AgentVaultV2
  */
-async function getAgentPositions(userAddress, agentId, tokenAddress, tokenDecimals) {
-    const agentVault = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_V2_ABI, wallet);
+async function getAgentPositions(userAddress, agentId) {
     const agentIdBytes32 = uuidToBytes32(agentId);
-
-    // Get USDC balance from vault
-    const usdcBalance = await agentVault.getUserAgentBalance(userAddress, agentIdBytes32);
+    const usdcBalance = await agentVaultContract.getUserAgentBalance(userAddress, agentIdBytes32);
     const usdcAmount = parseFloat(ethers.formatUnits(usdcBalance, 6));
 
-    // Token positions not tracked in this vault version — assume no open position
+    // Check in-memory open position
+    const pos = agentPositions[agentId];
+    const tokenAmount   = pos ? pos.amount : 0;
+    const tokenValueUSD = pos ? pos.amount * pos.currentPrice : 0;
+
     return {
         usdcBalance: usdcAmount,
-        tokenAmount: 0,
-        tokenValueUSD: 0,
-        hasPosition: false,
+        tokenAmount,
+        tokenValueUSD,
+        hasPosition: tokenAmount > 0,
+        openPosition: pos || null,
     };
 }
 
@@ -722,19 +738,87 @@ app.post('/api/smart-trade', async (req, res) => {
         console.log(`   Reason: ${decision.reasoning}`);
         console.log(`   Risk: ${decision.riskAssessment}`);
 
-        // 4. Execute trade if not HOLD
-        let txHash = null;
-        let newBalance = positions.usdcBalance;
-        let tokensTraded = 0;
-        let tradeError = null;
+        // ─── 4. ORACLE PRICE UPDATE ────────────────────────────────────────
+        // Push CoinGecko live price to SimpleDEX so on-chain trades use real prices
+        try {
+            const priceInUSDC = BigInt(Math.round(marketData.currentPrice * 1e6));
+            const updateTx = await simpleDexContract.updatePrice(tokenInfo.address, priceInUSDC, {
+                maxPriorityFeePerGas: BigInt(30_000_000_000),
+                maxFeePerGas: BigInt(60_000_000_000),
+            });
+            await updateTx.wait();
+            console.log(`💹 Price updated on-chain: $${marketData.currentPrice.toFixed(2)}`);
+        } catch (priceErr) {
+            console.warn(`⚠️  Price update skipped: ${priceErr.message?.slice(0, 80)}`);
+        }
 
-        if (decision.action !== 'HOLD' && decision.confidence >= 65) {
-            // NOTE: Polygon Amoy AgentVault is a deposit/withdraw vault.
-            // On-chain trade execution (executeBuy/executeSell) is not available
-            // in this vault version. The AI decision is returned to the frontend
-            // for display. Future: implement SimpleDEX calls from the operator wallet.
-            console.log(`ℹ️  Decision: ${decision.action} — vault does not support on-chain execution in this version.`);
-            tradeError = 'On-chain execution not available in this vault version. Decision is advisory.';
+        // ─── 5. ON-CHAIN EXECUTION VIA simulateTrade ─────────────────────
+        if (decision.action !== 'HOLD' && decision.confidence >= 55) {
+            const agentIdBytes32 = uuidToBytes32(agentId);
+            const pos = agentPositions[agentId];
+
+            if (decision.action === 'BUY' && positions.usdcBalance >= 3 && !positions.hasPosition) {
+                // Calculate buy amount (% of available cash)
+                const buyAmount = positions.usdcBalance * (decision.suggestedAmount / 100);
+                if (buyAmount >= 3) {
+                    const tokensReceived = buyAmount / marketData.currentPrice;
+                    // Record open position in memory
+                    agentPositions[agentId] = {
+                        token: tokenInfo.symbol,
+                        tokenAddress: tokenInfo.address,
+                        amount: tokensReceived,
+                        entryPrice: marketData.currentPrice,
+                        currentPrice: marketData.currentPrice,
+                        entryUSDC: buyAmount,
+                    };
+                    // Call simulateTrade with -buyAmount (USDC leaves balance)
+                    const pnlWei = -BigInt(Math.round(buyAmount * 1e6));
+                    try {
+                        const tx = await agentVaultContract.simulateTrade(agentIdBytes32, userAddress, pnlWei, {
+                            maxPriorityFeePerGas: BigInt(30_000_000_000),
+                            maxFeePerGas: BigInt(60_000_000_000),
+                        });
+                        const receipt = await tx.wait();
+                        txHash = receipt.hash;
+                        tokensTraded = tokensReceived;
+                        recordTrade(agentId, 'BUY');
+                        console.log(`✅ BUY executed on-chain! $${buyAmount.toFixed(2)} USDC → ${tokensReceived.toFixed(6)} ${tokenInfo.symbol} | Tx: ${txHash}`);
+                    } catch (err) {
+                        tradeError = err.message;
+                        delete agentPositions[agentId];
+                        console.error(`❌ BUY simulateTrade failed:`, err.message);
+                    }
+                }
+            } else if (decision.action === 'SELL' && pos) {
+                // Calculate P&L from open position
+                pos.currentPrice = marketData.currentPrice;
+                const currentValueUSD = pos.amount * marketData.currentPrice;
+                const pnlUSD = currentValueUSD - pos.entryUSDC; // can be + or -
+                const pnlWei = BigInt(Math.round(pnlUSD * 1e6));
+
+                try {
+                    const tx = await agentVaultContract.simulateTrade(agentIdBytes32, userAddress, pnlWei, {
+                        maxPriorityFeePerGas: BigInt(30_000_000_000),
+                        maxFeePerGas: BigInt(60_000_000_000),
+                    });
+                    const receipt = await tx.wait();
+                    txHash = receipt.hash;
+                    tokensTraded = pos.amount;
+                    const pnlSign = pnlUSD >= 0 ? '+' : '';
+                    delete agentPositions[agentId]; // close position
+                    recordTrade(agentId, 'SELL');
+                    console.log(`✅ SELL executed on-chain! P&L: ${pnlSign}$${pnlUSD.toFixed(2)} | Tx: ${txHash}`);
+                } catch (err) {
+                    tradeError = err.message;
+                    console.error(`❌ SELL simulateTrade failed:`, err.message);
+                }
+            }
+
+            // Refresh balance after execution
+            if (txHash) {
+                const newPositions = await getAgentPositions(userAddress, agentId);
+                newBalance = newPositions.usdcBalance;
+            }
         }
 
         res.json({
@@ -843,11 +927,11 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`   ✅ Ichimoku Cloud — multi-timeframe trend filter`);
     console.log(`   ✅ Market Structure — HH/HL vs LH/LL classification`);
     console.log(`   ─── Pro Rules ──────────────────────────────────────────`);
-    console.log(`   ✅ BUY needs score ≥ 4.0 + ≥ 3 confirming modules`);
-    console.log(`   ✅ SELL needs score ≥ 3.0 + ≥ 2 confirming modules`);
+    console.log(`   ✅ BUY needs score ≥ 2.0 + ≥ 2 confirming modules`);
+    console.log(`   ✅ SELL needs score ≥ 1.5 + ≥ 1 confirming modules`);
     console.log(`   ✅ ATR-based position sizing (risk% / stop% formula)`);
     console.log(`   ✅ EMA regime gate — no longs in STRONG_DOWNTREND`);
     console.log(`   ✅ 20% cash reserve + 60% max exposure rules`);
-    console.log(`   ✅ 5min cooldown + 5 trade session limit`);
+    console.log(`   ✅ 60s cooldown + 50 trade session limit`);
     console.log(`${'='.repeat(65)}\n`);
 });
