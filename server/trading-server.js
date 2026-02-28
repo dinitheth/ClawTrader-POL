@@ -70,31 +70,22 @@ const ERC20_ABI = [
     'function allowance(address owner, address spender) external view returns (uint256)',
 ];
 
-// Setup provider and wallet (Polygon Amoy)
-// Use multiple RPCs as fallback — drpc.org free tier occasionally returns malformed responses
+// Setup provider and wallet (Polygon Amoy — chainId 80002)
+// staticNetwork locks chainId so drpc.org chain-detection failures don't break things
+const AMOY_NETWORK = { chainId: 80002, name: 'polygon-amoy' };
 const RPC_URLS = [
     process.env.POLYGON_AMOY_RPC_URL || 'https://polygon-amoy.drpc.org',
     'https://rpc-amoy.polygon.technology',
     'https://polygon-amoy-bor-rpc.publicnode.com',
 ];
 
-// Build FallbackProvider — tries each in order on failure
-function makeProvider() {
-    const providers = RPC_URLS.map(url => new ethers.JsonRpcProvider(url));
-    if (providers.length === 1) return providers[0];
-    return new ethers.FallbackProvider(
-        providers.map((p, i) => ({ provider: p, priority: i + 1, stallTimeout: 2000 })),
-        1 // quorum = 1 (first success wins)
-    );
-}
-
-const provider = makeProvider();
+const provider = new ethers.JsonRpcProvider(RPC_URLS[0], AMOY_NETWORK, { staticNetwork: true });
 const wallet = new ethers.Wallet(process.env.TRADING_WALLET_PRIVATE_KEY, provider);
 const agentVaultContract = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_ABI, wallet);
 const simpleDexContract = new ethers.Contract(CONTRACTS.SIMPLE_DEX, SIMPLE_DEX_ABI, wallet);
 const usdcContract = new ethers.Contract(CONTRACTS.USDC, ERC20_ABI, wallet);
 
-// Retry wrapper for on-chain transactions — handles transient RPC errors
+// Retry wrapper — waits and retries on transient RPC errors (drpc.org free tier quirks)
 async function sendWithRetry(fn, retries = 3, delayMs = 1500) {
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
@@ -105,7 +96,7 @@ async function sendWithRetry(fn, retries = 3, delayMs = 1500) {
                 err?.message?.includes('timeout') ||
                 err?.code === 'UNKNOWN_ERROR';
             if (isTransient && attempt < retries) {
-                console.warn(`⚠️ RPC transient error (attempt ${attempt}/${retries}), retrying in ${delayMs}ms...`);
+                console.warn(`⚠️  RPC transient error (attempt ${attempt}/${retries}), retrying in ${delayMs}ms...`);
                 await new Promise(r => setTimeout(r, delayMs));
             } else {
                 throw err;
