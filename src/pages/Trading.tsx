@@ -590,50 +590,28 @@ const Trading = () => {
 
         {/* News Ticker */}
         <NewsTicker />
-
+        {/* ── 3-column layout: Left=Agent+AI | Center=Chart | Right=Trades ── */}
         <div className="container mx-auto px-4 py-4 md:py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-            {/* Left Column: Chart + Latest AI Decision */}
-            <div className="lg:col-span-2 space-y-4">
-              {/* Chart — shorter so AI Decision fits below */}
-              <Card className="overflow-hidden">
-                <div className="h-[260px] md:h-[310px]">
-                  <TradingViewChart
-                    symbol={symbol}
-                    interval={chartInterval}
-                    theme={theme === 'dark' ? 'dark' : 'light'}
-                    height={310}
-                    autosize={true}
-                  />
-                </div>
-              </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
 
-              {/* Latest AI Decision — now below chart on left */}
-              <LatestDecisionCard
-                decision={decision}
-                agentName={selectedAgent?.name}
-                timestamp={analysisHistory[0]?.timestamp}
-              />
-            </div>
+            {/* ── LEFT: Agent Panel + Latest AI Decision ── */}
+            <div className="lg:col-span-1 space-y-4">
 
-            {/* Right Panel */}
-            <div className="space-y-4 md:space-y-6">
-
-              {/* Agent Selector */}
+              {/* Agent Selector Card */}
               <Card>
-                <CardHeader className="pb-2 md:pb-3">
+                <CardHeader className="pb-2">
                   <CardTitle className="text-xs md:text-sm flex items-center gap-2">
                     <Bot className="w-4 h-4" />
                     Select Trading Agent
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 md:space-y-4">
+                <CardContent className="space-y-3">
                   {isLoadingAgents ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-5 h-5 animate-spin" />
                     </div>
                   ) : agents.length === 0 ? (
-                    <p className="text-xs md:text-sm text-muted-foreground text-center py-4">
+                    <p className="text-xs text-muted-foreground text-center py-4">
                       No agents created yet. Create one to start trading!
                     </p>
                   ) : (
@@ -658,12 +636,12 @@ const Trading = () => {
                   )}
 
                   {selectedAgent && (
-                    <div className="p-2 md:p-3 rounded-lg bg-muted/30 space-y-2">
+                    <div className="p-2 rounded-lg bg-muted/30 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl md:text-2xl">{selectedAgent.avatar}</span>
+                        <span className="text-xl">{selectedAgent.avatar}</span>
                         <div className="min-w-0">
-                          <p className="font-medium text-sm md:text-base truncate">{selectedAgent.name}</p>
-                          <p className="text-[10px] md:text-xs text-muted-foreground capitalize">{selectedAgent.personality}</p>
+                          <p className="font-medium text-sm truncate">{selectedAgent.name}</p>
+                          <p className="text-[10px] text-muted-foreground capitalize">{selectedAgent.personality}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-5 gap-1 text-center">
@@ -675,43 +653,35 @@ const Trading = () => {
                           { label: 'CTR', value: selectedAgent.dna_contrarian_bias },
                         ].map(stat => (
                           <div key={stat.label}>
-                            <div className="text-[9px] md:text-xs text-muted-foreground">{stat.label}</div>
-                            <div className="text-xs md:text-sm font-mono">{Math.round(Number(stat.value) * 100)}</div>
+                            <div className="text-[9px] text-muted-foreground">{stat.label}</div>
+                            <div className="text-xs font-mono">{Math.round(Number(stat.value) * 100)}</div>
                           </div>
                         ))}
                       </div>
 
-                      {/* On-Chain Balance - live from AgentVaultV2 contract */}
-                      <div className="mt-3 pt-3 border-t border-border/50">
+                      {/* On-Chain Balance */}
+                      <div className="pt-2 border-t border-border/50">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            {(onChainBalance as any).newVaultBalance > 0 ? 'Active Vault Balance' : 'On-Chain Balance'}
-                          </span>
+                          <span className="text-xs text-muted-foreground">On-Chain Balance</span>
                           <div className="text-right">
-                            <span className="text-lg font-mono font-bold text-primary">
+                            <span className="text-base font-mono font-bold text-primary">
                               {onChainBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span className="text-xs text-muted-foreground ml-1">USDC</span>
                           </div>
                         </div>
-                        {/* Migration notice: old vault has funds but new vault is empty */}
                         {onChainBalance > 0 && (onChainBalance as any).newVaultBalance === 0 && (
                           <div className="mt-2 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-400">
-                            ⚠️ Your USDC is in the <b>old vault</b>. To enable real trading:<br />
-                            1. Click <b>Withdraw</b> → withdraw all USDC<br />
-                            2. Click <b>Fund Agent</b> → deposit into new vault
+                            ⚠️ Old vault funds detected. Withdraw and re-deposit to enable trading.
                           </div>
                         )}
                       </div>
 
                       {/* Realized PnL */}
-                      <div className="mt-2 flex items-center justify-between">
+                      <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Realized PnL</span>
                         <div className="text-right">
-                          <span
-                            className="text-lg font-mono font-bold"
-                            style={{ color: pnlData.realizedPnL >= 0 ? '#16c784' : '#ea3943' }}
-                          >
+                          <span className="text-base font-mono font-bold" style={{ color: pnlData.realizedPnL >= 0 ? '#16c784' : '#ea3943' }}>
                             {pnlData.realizedPnL >= 0 ? '+' : ''}{pnlData.realizedPnL.toFixed(2)}
                           </span>
                           <span className="text-xs text-muted-foreground ml-1">USDC</span>
@@ -720,14 +690,14 @@ const Trading = () => {
 
                       {/* Trade Stats */}
                       {pnlData.totalTrades > 0 && (
-                        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>Trades: {pnlData.totalTrades}</span>
                           <span className="flex gap-2 items-center">
                             <span style={{ color: '#16c784' }}>↑{pnlData.buyTrades}</span>
                             <span style={{ color: '#ea3943' }}>↓{pnlData.sellTrades}</span>
                             <button
                               onClick={() => setShowClearTradesDialog(true)}
-                              className="ml-2 p-1 rounded hover:bg-muted/30 text-muted-foreground hover:text-destructive transition-colors"
+                              className="ml-1 p-1 rounded hover:bg-muted/30 text-muted-foreground hover:text-destructive transition-colors"
                               title="Clear trade history"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -741,82 +711,67 @@ const Trading = () => {
                   {/* Action Buttons */}
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        onClick={() => setShowFundModal(true)}
-                        disabled={!selectedAgent}
-                        variant="outline"
-                        className="gap-1 md:gap-2 text-xs md:text-sm"
-                        size="sm"
-                      >
-                        <Wallet className="w-3 h-3 md:w-4 md:h-4" />
-                        Fund Agent
+                      <Button onClick={() => setShowFundModal(true)} disabled={!selectedAgent} variant="outline" className="gap-1 text-xs" size="sm">
+                        <Wallet className="w-3 h-3" /> Fund Agent
                       </Button>
-                      <Button
-                        onClick={() => setShowWithdrawModal(true)}
-                        disabled={!selectedAgent || onChainBalance <= 0}
-                        variant="outline"
-                        className="gap-1 md:gap-2 text-xs md:text-sm"
-                        size="sm"
-                      >
-                        <ArrowDown className="w-3 h-3 md:w-4 md:h-4" />
-                        Withdraw
+                      <Button onClick={() => setShowWithdrawModal(true)} disabled={!selectedAgent || onChainBalance <= 0} variant="outline" className="gap-1 text-xs" size="sm">
+                        <ArrowDown className="w-3 h-3" /> Withdraw
                       </Button>
                     </div>
-
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        onClick={() => handleAnalyze()}
-                        disabled={!selectedAgent || isAnalyzing || isAutoTrading}
-                        variant="outline"
-                        className="gap-1 md:gap-2 text-xs md:text-sm"
-                        size="sm"
-                      >
-                        {isAnalyzing ? (
-                          <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
-                        ) : (
-                          <Brain className="w-3 h-3 md:w-4 md:h-4" />
-                        )}
+                      <Button onClick={() => handleAnalyze()} disabled={!selectedAgent || isAnalyzing || isAutoTrading} variant="outline" className="gap-1 text-xs" size="sm">
+                        {isAnalyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
                         Analyze
                       </Button>
-
                       <Button
                         onClick={toggleAutoTrading}
                         disabled={!selectedAgent || (!isAutoTrading && onChainBalance <= 0)}
-                        className={`gap-1 md:gap-2 text-xs md:text-sm ${isAutoTrading ? 'bg-destructive hover:bg-destructive/90' : 'bg-gradient-to-r from-primary to-secondary'}`}
+                        className={`gap-1 text-xs ${isAutoTrading ? 'bg-destructive hover:bg-destructive/90' : 'bg-gradient-to-r from-primary to-secondary'}`}
                         size="sm"
                       >
-                        {isAutoTrading ? (
-                          <>
-                            <Square className="w-3 h-3 md:w-4 md:h-4" />
-                            Stop
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-3 h-3 md:w-4 md:h-4" />
-                            Auto Trade
-                          </>
-                        )}
+                        {isAutoTrading ? <><Square className="w-3 h-3" /> Stop</> : <><Play className="w-3 h-3" /> Auto Trade</>}
                       </Button>
                     </div>
                   </div>
 
-
                   {/* Auto Trading Status */}
                   {isAutoTrading && (
                     <div className="p-2 rounded-lg bg-accent/10 border border-accent/30 text-center">
-                      <div className="flex items-center justify-center gap-2 text-accent text-xs md:text-sm">
-                        <Activity className="w-3 h-3 md:w-4 md:h-4 animate-pulse" />
+                      <div className="flex items-center justify-center gap-2 text-accent text-xs">
+                        <Activity className="w-3 h-3 animate-pulse" />
                         <span>Auto trading active</span>
                       </div>
-                      <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
-                        Executing every 30 seconds
-                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Executing every 30 seconds</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Recent Trades — now below agent controls on right */}
+              {/* Latest AI Decision — bottom of left column */}
+              <LatestDecisionCard
+                decision={decision}
+                agentName={selectedAgent?.name}
+                timestamp={analysisHistory[0]?.timestamp}
+              />
+            </div>
+
+            {/* ── CENTER: Chart (wide, full height) ── */}
+            <div className="lg:col-span-2">
+              <Card className="overflow-hidden">
+                <div className="h-[520px] md:h-[580px]">
+                  <TradingViewChart
+                    symbol={symbol}
+                    interval={chartInterval}
+                    theme={theme === 'dark' ? 'dark' : 'light'}
+                    height={580}
+                    autosize={true}
+                  />
+                </div>
+              </Card>
+            </div>
+
+            {/* ── RIGHT: Recent Trades ── */}
+            <div className="lg:col-span-1 space-y-4">
               <RecentTrades trades={trades} tradePnLMap={pnlData.tradePnLMap} />
 
               {/* No Balance Warning */}
@@ -827,16 +782,9 @@ const Trading = () => {
                       <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-warning text-sm">Fund Your Agent</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Add USDC to your agent's vault to enable autonomous trading.
-                        </p>
-                        <Button
-                          onClick={() => setShowFundModal(true)}
-                          size="sm"
-                          className="mt-2 gap-1 text-xs"
-                        >
-                          <Wallet className="w-3 h-3" />
-                          Fund Agent Now
+                        <p className="text-xs text-muted-foreground mt-1">Add USDC to your agent's vault to enable autonomous trading.</p>
+                        <Button onClick={() => setShowFundModal(true)} size="sm" className="mt-2 gap-1 text-xs">
+                          <Wallet className="w-3 h-3" /> Fund Agent Now
                         </Button>
                       </div>
                     </div>
@@ -844,6 +792,7 @@ const Trading = () => {
                 </Card>
               )}
             </div>
+
           </div>
         </div>
       </div>
