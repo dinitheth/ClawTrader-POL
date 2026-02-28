@@ -471,10 +471,10 @@ function makeSmartDecision(marketData, positions, agentDNA, agentId) {
     const MAX_TRADES_PER_SESSION = 50;     // High limit — let the engine trade freely
     const TRADE_COOLDOWN_MS = 60_000;      // 60s cooldown (matches 30s frontend loop)
     const MIN_CONFIDENCE = 55;             // Lower bar so more decisions pass
-    const BUY_SCORE_THRESHOLD = 2.0;      // Relaxed: 2 weighted signals enough to BUY
-    const SELL_SCORE_THRESHOLD = 1.5;     // Relaxed: 1-2 sell signals enough to SELL
-    const MIN_BUY_SIGNALS = 2;            // Minimum confirming buy modules
-    const MIN_SELL_SIGNALS = 1;           // Minimum confirming sell modules
+    const BUY_SCORE_THRESHOLD = 1.0;      // Fire on single strong buy signal
+    const SELL_SCORE_THRESHOLD = 1.0;     // Fire on single strong sell signal
+    const MIN_BUY_SIGNALS = 1;            // 1 module is enough to enter
+    const MIN_SELL_SIGNALS = 1;           // 1 module is enough to exit
 
     // DNA adjusts the pro threshold (±1 range)
     const effectiveBuyThreshold = BUY_SCORE_THRESHOLD - aggressionFactor * 0.8;
