@@ -753,6 +753,11 @@ app.post('/api/smart-trade', async (req, res) => {
         }
 
         // ─── 5. ON-CHAIN EXECUTION VIA simulateTrade ─────────────────────
+        let txHash = null;
+        let newBalance = positions.usdcBalance;
+        let tokensTraded = 0;
+        let tradeError = null;
+
         if (decision.action !== 'HOLD' && decision.confidence >= 55) {
             const agentIdBytes32 = uuidToBytes32(agentId);
             const pos = agentPositions[agentId];
