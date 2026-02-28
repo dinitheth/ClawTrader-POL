@@ -87,7 +87,7 @@ const Trading = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [showClearTradesDialog, setShowClearTradesDialog] = useState(false);
-  const [agentBalance, setAgentBalance] = useState(0);
+
   const [trades, setTrades] = useState<Trade[]>(() => {
     // Load persisted trades from localStorage on initial render
     if (typeof window !== 'undefined') {
@@ -122,14 +122,14 @@ const Trading = () => {
     },
   });
 
-  // Read agent balance from on-chain vault
+  // Read agent on-chain vault balance (auto-refreshes every 5 seconds)
   const {
     balance: onChainBalance,
     isContractReady: isVaultReady,
     refetch: refetchVaultBalance
   } = useAgentVaultBalance({
     agentId: selectedAgentId,
-    refetchInterval: 10000 // Refresh every 10 seconds
+    refetchInterval: 5000 // Refresh every 5 seconds — real-time
   });
 
   // SimpleDEX for on-chain trading
@@ -523,25 +523,17 @@ const Trading = () => {
     };
   }, [isAutoTrading, selectedAgent?.id, onChainBalance, symbol, toast]);
 
-  const handleFundAgent = async (amount: number) => {
-    if (!selectedAgent) return;
-
-    // Update database
-    const newBalance = agentBalance + amount;
-    try {
-      await agentService.update(selectedAgent.id, { balance: newBalance });
-      setAgentBalance(newBalance);
-    } catch (err) {
-      toast({
-        title: 'Fund Failed',
-        description: 'Unable to update agent balance',
-        variant: 'destructive',
-      });
-    }
+  const handleFundAgent = async (_amount: number) => {
+    // After on-chain deposit completes, just refetch the vault balance
+    // The vault balance IS the source of truth — no DB needed
+    setTimeout(() => refetchVaultBalance(), 2000);
+    setTimeout(() => refetchVaultBalance(), 5000);
   };
 
-  const handleWithdraw = (amount: number) => {
-    setAgentBalance(prev => Math.max(0, prev - amount));
+  const handleWithdraw = (_amount: number) => {
+    // After on-chain withdrawal, refetch vault balance
+    setTimeout(() => refetchVaultBalance(), 2000);
+    setTimeout(() => refetchVaultBalance(), 5000);
   };
 
   const toggleAutoTrading = async () => {
@@ -695,13 +687,13 @@ const Trading = () => {
                         ))}
                       </div>
 
-                      {/* On-Chain Balance - Moved here from Agent Portfolio */}
+                      {/* On-Chain Balance - live from AgentVaultV2 contract */}
                       <div className="mt-3 pt-3 border-t border-border/50">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">On-Chain Balance</span>
                           <div className="text-right">
                             <span className="text-lg font-mono font-bold text-primary">
-                              {agentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {onChainBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span className="text-xs text-muted-foreground ml-1">USDC</span>
                           </div>
