@@ -180,10 +180,10 @@ const Trading = () => {
   useEffect(() => {
     if (isVaultReady) {
       // Always use on-chain balance from AgentVault contract
-      setAgentBalance(onChainBalance);
+      /* onChainBalance already bound */;
     } else {
       // Contract not ready yet - show 0
-      setAgentBalance(0);
+      /* onChainBalance = 0 */;
     }
   }, [onChainBalance, isVaultReady]);
 
@@ -290,7 +290,7 @@ const Trading = () => {
 
   // Restore auto-trading from localStorage when agent and balance are ready
   useEffect(() => {
-    if (!selectedAgentId || agentBalance <= 0) return;
+    if (!selectedAgentId || onChainBalance <= 0) return;
 
     const saved = localStorage.getItem('autoTrading');
     if (saved) {
@@ -307,7 +307,7 @@ const Trading = () => {
         localStorage.removeItem('autoTrading');
       }
     }
-  }, [selectedAgentId, agentBalance > 0]); // Only run when agent selected and has balance
+  }, [selectedAgentId, onChainBalance > 0]); // Only run when agent selected and has balance
 
   const handleAnalyze = useCallback(async () => {
     if (!selectedAgent) {
@@ -341,7 +341,7 @@ const Trading = () => {
         agentDNA,
         marketData,
         selectedAgent.personality,
-        agentBalance
+        onChainBalance
       );
 
       if (result.success && result.decision) {
@@ -545,7 +545,7 @@ const Trading = () => {
     }
 
     // Starting: check balance first
-    if (agentBalance <= 0) {
+    if (onChainBalance <= 0) {
       toast({
         title: 'Fund Your Agent First',
         description: 'Add USDC to your agent\'s balance before starting autonomous trading',
@@ -749,7 +749,7 @@ const Trading = () => {
                       </Button>
                       <Button
                         onClick={() => setShowWithdrawModal(true)}
-                        disabled={!selectedAgent || agentBalance <= 0}
+                        disabled={!selectedAgent || onChainBalance <= 0}
                         variant="outline"
                         className="gap-1 md:gap-2 text-xs md:text-sm"
                         size="sm"
@@ -777,7 +777,7 @@ const Trading = () => {
 
                       <Button
                         onClick={toggleAutoTrading}
-                        disabled={!selectedAgent || (!isAutoTrading && agentBalance <= 0)}
+                        disabled={!selectedAgent || (!isAutoTrading && onChainBalance <= 0)}
                         className={`gap-1 md:gap-2 text-xs md:text-sm ${isAutoTrading ? 'bg-destructive hover:bg-destructive/90' : 'bg-gradient-to-r from-primary to-secondary'}`}
                         size="sm"
                       >
@@ -822,7 +822,7 @@ const Trading = () => {
               />
 
               {/* No Balance Warning */}
-              {selectedAgent && agentBalance <= 0 && !decision && (
+              {selectedAgent && onChainBalance <= 0 && !decision && (
                 <Card className="border-warning/30 bg-warning/5">
                   <CardContent className="py-3 md:py-4">
                     <div className="flex items-start gap-2 md:gap-3">
@@ -854,7 +854,7 @@ const Trading = () => {
       <FundAgentModal
         open={showFundModal}
         onOpenChange={setShowFundModal}
-        agent={selectedAgent ? { ...selectedAgent, balance: agentBalance } : null}
+        agent={selectedAgent ? { ...selectedAgent, balance: onChainBalance } : null}
         onFunded={handleFundAgent}
       />
 
@@ -862,7 +862,7 @@ const Trading = () => {
       <WithdrawModal
         open={showWithdrawModal}
         onOpenChange={setShowWithdrawModal}
-        agent={selectedAgent ? { ...selectedAgent, balance: agentBalance } : null}
+        agent={selectedAgent ? { ...selectedAgent, balance: onChainBalance } : null}
         onWithdrawn={handleWithdraw}
       />
 
@@ -871,7 +871,7 @@ const Trading = () => {
         open={showExecuteModal}
         onOpenChange={setShowExecuteModal}
         decision={decision}
-        agent={selectedAgent ? { ...selectedAgent, balance: agentBalance } : null}
+        agent={selectedAgent ? { ...selectedAgent, balance: onChainBalance } : null}
         symbol={symbol}
         onTradeComplete={() => { }}
       />
