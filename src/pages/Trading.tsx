@@ -125,6 +125,8 @@ const Trading = () => {
   // Read agent on-chain vault balance (auto-refreshes every 5 seconds)
   const {
     balance: onChainBalance,
+    oldVaultBalance,
+    newVaultBalance,
     isContractReady: isVaultReady,
     refetch: refetchVaultBalance
   } = useAgentVaultBalance({
@@ -176,27 +178,17 @@ const Trading = () => {
   const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
 
-  // Update balance: ONLY use on-chain balance from AgentVault contract
+  // Clear stale localStorage trades if new vault has zero balance (old demo data)
   useEffect(() => {
-    if (isVaultReady) {
-      // Always use on-chain balance from AgentVault contract
-      /* onChainBalance already bound */;
-    } else {
-      // Contract not ready yet - show 0
-      /* onChainBalance = 0 */;
+    if (selectedAgentId && newVaultBalance === 0) {
+      localStorage.removeItem(`trades_${selectedAgentId}`);
+      setTrades([]);
     }
-  }, [onChainBalance, isVaultReady]);
+  }, [selectedAgentId, newVaultBalance]);
 
-  // Save trades to localStorage whenever they change
+  // Load trades from localStorage when agent changes (only if new vault has real balance)
   useEffect(() => {
-    if (selectedAgentId && trades.length > 0) {
-      localStorage.setItem(`trades_${selectedAgentId}`, JSON.stringify(trades.slice(0, 50)));
-    }
-  }, [trades, selectedAgentId]);
-
-  // Load trades when agent changes
-  useEffect(() => {
-    if (selectedAgentId) {
+    if (selectedAgentId && newVaultBalance > 0) {
       const savedTrades = localStorage.getItem(`trades_${selectedAgentId}`);
       if (savedTrades) {
         try {
@@ -204,8 +196,6 @@ const Trading = () => {
         } catch {
           setTrades([]);
         }
-      } else {
-        setTrades([]);
       }
     }
   }, [selectedAgentId]);
@@ -690,7 +680,9 @@ const Trading = () => {
                       {/* On-Chain Balance - live from AgentVaultV2 contract */}
                       <div className="mt-3 pt-3 border-t border-border/50">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">On-Chain Balance</span>
+                          <span className="text-xs text-muted-foreground">
+                            {(onChainBalance as any).newVaultBalance > 0 ? 'Active Vault Balance' : 'On-Chain Balance'}
+                          </span>
                           <div className="text-right">
                             <span className="text-lg font-mono font-bold text-primary">
                               {onChainBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -698,6 +690,14 @@ const Trading = () => {
                             <span className="text-xs text-muted-foreground ml-1">USDC</span>
                           </div>
                         </div>
+                        {/* Migration notice: old vault has funds but new vault is empty */}
+                        {onChainBalance > 0 && (onChainBalance as any).newVaultBalance === 0 && (
+                          <div className="mt-2 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-400">
+                            ⚠️ Your USDC is in the <b>old vault</b>. To enable real trading:<br />
+                            1. Click <b>Withdraw</b> → withdraw all USDC<br />
+                            2. Click <b>Fund Agent</b> → deposit into new vault
+                          </div>
+                        )}
                       </div>
 
                       {/* Realized PnL */}

@@ -789,7 +789,10 @@ app.post('/api/smart-trade', async (req, res) => {
             const agentIdBytes32 = uuidToBytes32(agentId);
             const pos = agentPositions[agentId];
 
-            if (decision.action === 'BUY' && positions.usdcBalance >= 3 && !positions.hasPosition) {
+            // Guard: need real vault USDC balance to BUY
+            if (decision.action === 'BUY' && positions.usdcBalance < 3) {
+                console.log(`⏭  BUY skipped — vault USDC balance is $${positions.usdcBalance.toFixed(2)} (need ≥$3). Fund the new vault first.`);
+            } else if (decision.action === 'BUY' && positions.usdcBalance >= 3 && !positions.hasPosition) {
                 const buyAmount = positions.usdcBalance * (decision.suggestedAmount / 100);
                 if (buyAmount >= 3) {
                     const buyAmountWei = BigInt(Math.round(buyAmount * 1e6));
@@ -841,37 +844,49 @@ app.post('/api/smart-trade', async (req, res) => {
                     pos.currentPrice = marketData.currentPrice;
                     const tokenAmountWei = BigInt(Math.round(pos.amount * 10 ** pos.decimals));
 
-                    const [expectedUSDC] = await simpleDexContract.getSellQuote(pos.tokenAddress, tokenAmountWei);
-                    const minUSDC = expectedUSDC * 95n / 100n;
-
-                    console.log(`⚡ SELL: ${pos.amount.toFixed(6)} ${pos.token} → USDC (user: ${userAddress.slice(0, 10)}...)`);
-
-                    // operatorSell: vault sells stored tokens, credits USDC back to user's balance
-                    const tx = await agentVaultContract.operatorSell(
-                        agentIdBytes32,
-                        userAddress,
-                        pos.tokenAddress,
-                        tokenAmountWei,
-                        minUSDC,
-                        GAS_OPTS
+                    // ── On-chain guard: verify vault actually holds the tokens ──
+                    const vaultTokenBalance = await agentVaultContract.getTokenPosition(
+                        userAddress, agentIdBytes32, pos.tokenAddress
                     );
-                    const receipt = await tx.wait();
-                    txHash = receipt.hash;
-                    tokensTraded = pos.amount;
+                    if (vaultTokenBalance < tokenAmountWei) {
+                        console.log(`⏭  SELL skipped — vault has ${ethers.formatUnits(vaultTokenBalance, pos.decimals)} ${pos.token} but need ${pos.amount.toFixed(6)}. Clearing stale position.`);
+                        delete agentPositions[agentId]; // clear stale in-memory position
+                        tradeError = null; // not a real error
+                    } else {
+                        const [expectedUSDC] = await simpleDexContract.getSellQuote(pos.tokenAddress, tokenAmountWei);
+                        const minUSDC = expectedUSDC * 95n / 100n;
 
-                    const receivedUSDC = parseFloat(ethers.formatUnits(expectedUSDC, 6));
-                    const pnlUSD = receivedUSDC - pos.entryUSDC;
-                    const pnlSign = pnlUSD >= 0 ? '+' : '';
-                    newBalance = positions.usdcBalance + receivedUSDC;
+                        console.log(`⚡ SELL: ${pos.amount.toFixed(6)} ${pos.token} → USDC (user: ${userAddress.slice(0, 10)}...)`);
 
-                    delete agentPositions[agentId];
-                    recordTrade(agentId, 'SELL');
-                    console.log(`✅ REAL SELL on-chain! P&L: ${pnlSign}$${pnlUSD.toFixed(2)} | Tx: ${txHash}`);
+                        // operatorSell: vault sells stored tokens, credits USDC back to user's balance
+                        const tx = await agentVaultContract.operatorSell(
+                            agentIdBytes32,
+                            userAddress,
+                            pos.tokenAddress,
+                            tokenAmountWei,
+                            minUSDC,
+                            GAS_OPTS
+                        );
+                        const receipt = await tx.wait();
+                        txHash = receipt.hash;
+                        tokensTraded = pos.amount;
+
+                        const receivedUSDC = parseFloat(ethers.formatUnits(expectedUSDC, 6));
+                        const pnlUSD = receivedUSDC - pos.entryUSDC;
+                        const pnlSign = pnlUSD >= 0 ? '+' : '';
+                        newBalance = positions.usdcBalance + receivedUSDC;
+
+                        delete agentPositions[agentId];
+                        recordTrade(agentId, 'SELL');
+                        console.log(`✅ REAL SELL on-chain! P&L: ${pnlSign}$${pnlUSD.toFixed(2)} | Tx: ${txHash}`);
+                    }
 
                 } catch (err) {
                     tradeError = err.message;
                     console.error(`❌ operatorSell failed:`, err.message?.slice(0, 150));
                 }
+            } else if (decision.action === 'SELL' && !pos) {
+                console.log(`⏭  SELL skipped — no open position in server memory (server may have restarted).`);
             }
 
         }
