@@ -71,13 +71,48 @@ const ERC20_ABI = [
 ];
 
 // Setup provider and wallet (Polygon Amoy)
-const provider = new ethers.JsonRpcProvider(
-    process.env.POLYGON_AMOY_RPC_URL || 'https://polygon-amoy.drpc.org'
-);
+// Use multiple RPCs as fallback — drpc.org free tier occasionally returns malformed responses
+const RPC_URLS = [
+    process.env.POLYGON_AMOY_RPC_URL || 'https://polygon-amoy.drpc.org',
+    'https://rpc-amoy.polygon.technology',
+    'https://polygon-amoy-bor-rpc.publicnode.com',
+];
+
+// Build FallbackProvider — tries each in order on failure
+function makeProvider() {
+    const providers = RPC_URLS.map(url => new ethers.JsonRpcProvider(url));
+    if (providers.length === 1) return providers[0];
+    return new ethers.FallbackProvider(
+        providers.map((p, i) => ({ provider: p, priority: i + 1, stallTimeout: 2000 })),
+        1 // quorum = 1 (first success wins)
+    );
+}
+
+const provider = makeProvider();
 const wallet = new ethers.Wallet(process.env.TRADING_WALLET_PRIVATE_KEY, provider);
 const agentVaultContract = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_ABI, wallet);
 const simpleDexContract = new ethers.Contract(CONTRACTS.SIMPLE_DEX, SIMPLE_DEX_ABI, wallet);
 const usdcContract = new ethers.Contract(CONTRACTS.USDC, ERC20_ABI, wallet);
+
+// Retry wrapper for on-chain transactions — handles transient RPC errors
+async function sendWithRetry(fn, retries = 3, delayMs = 1500) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            const isTransient = err?.message?.includes('neither result nor error') ||
+                err?.message?.includes('coalesce error') ||
+                err?.message?.includes('timeout') ||
+                err?.code === 'UNKNOWN_ERROR';
+            if (isTransient && attempt < retries) {
+                console.warn(`⚠️ RPC transient error (attempt ${attempt}/${retries}), retrying in ${delayMs}ms...`);
+                await new Promise(r => setTimeout(r, delayMs));
+            } else {
+                throw err;
+            }
+        }
+    }
+}
 
 console.log(`🔑 Trading wallet: ${wallet.address}`);
 
@@ -803,16 +838,15 @@ app.post('/api/smart-trade', async (req, res) => {
 
                         console.log(`⚡ BUY: $${buyAmount.toFixed(2)} vault USDC → ${tokenInfo.symbol} (user: ${userAddress.slice(0, 10)}...)`);
 
-                        // operatorBuy: vault takes USDC from user's balance, swaps on DEX
-                        // Gas wallet pays MATIC — user's USDC funds the trade
-                        const tx = await agentVaultContract.operatorBuy(
+                        // operatorBuy with retry on transient RPC errors
+                        const tx = await sendWithRetry(() => agentVaultContract.operatorBuy(
                             agentIdBytes32,
                             userAddress,
                             tokenInfo.address,
                             buyAmountWei,
                             minOut,
                             GAS_OPTS
-                        );
+                        ));
                         const receipt = await tx.wait();
                         txHash = receipt.hash;
                         const tokensOut = parseFloat(ethers.formatUnits(expectedOut, tokenInfo.decimals));
@@ -858,15 +892,15 @@ app.post('/api/smart-trade', async (req, res) => {
 
                         console.log(`⚡ SELL: ${pos.amount.toFixed(6)} ${pos.token} → USDC (user: ${userAddress.slice(0, 10)}...)`);
 
-                        // operatorSell: vault sells stored tokens, credits USDC back to user's balance
-                        const tx = await agentVaultContract.operatorSell(
+                        // operatorSell with retry on transient RPC errors
+                        const tx = await sendWithRetry(() => agentVaultContract.operatorSell(
                             agentIdBytes32,
                             userAddress,
                             pos.tokenAddress,
                             tokenAmountWei,
                             minUSDC,
                             GAS_OPTS
-                        );
+                        ));
                         const receipt = await tx.wait();
                         txHash = receipt.hash;
                         tokensTraded = pos.amount;
