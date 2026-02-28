@@ -729,78 +729,12 @@ app.post('/api/smart-trade', async (req, res) => {
         let tradeError = null;
 
         if (decision.action !== 'HOLD' && decision.confidence >= 65) {
-            const agentVault = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_V2_ABI, wallet);
-            const agentIdBytes32 = uuidToBytes32(agentId);
-
-            if (decision.action === 'BUY' && positions.usdcBalance > 0) {
-                // Calculate buy amount
-                const buyAmount = positions.usdcBalance * (decision.suggestedAmount / 100);
-
-                // Enforce minimum buy amount to prevent micro-trades
-                if (buyAmount < 3) {
-                    console.log(`⚠️ Buy amount too small ($${buyAmount.toFixed(2)}). Min: $3. Skipping.`);
-                } else {
-                    const amountIn = ethers.parseUnits(buyAmount.toFixed(6), 6);
-
-                    console.log(`🛒 Executing BUY: $${buyAmount.toFixed(2)} USDC → ${tokenInfo.symbol}`);
-
-                    try {
-                        const buyTx = await agentVault.executeBuy(
-                            agentIdBytes32,
-                            userAddress,
-                            tokenInfo.address,
-                            amountIn,
-                            0
-                        );
-                        const receipt = await buyTx.wait();
-                        txHash = receipt.hash;
-                        recordTrade(agentId, 'BUY');
-                        console.log(`✅ BUY executed! Tx: ${txHash}`);
-                    } catch (buyError) {
-                        console.error(`❌ BUY failed:`, buyError.message);
-                        tradeError = buyError.message;
-                    }
-                }
-
-            } else if (decision.action === 'SELL' && positions.hasPosition) {
-                // Calculate sell amount
-                const sellPercent = decision.suggestedAmount / 100;
-                const sellAmount = positions.tokenAmount * sellPercent;
-                const sellValueUSD = sellAmount * marketData.currentPrice;
-
-                // Enforce minimum sell value
-                if (sellValueUSD < 1) {
-                    console.log(`⚠️ Sell value too small ($${sellValueUSD.toFixed(2)}). Skipping.`);
-                } else {
-                    const amountIn = ethers.parseUnits(sellAmount.toFixed(tokenInfo.decimals), tokenInfo.decimals);
-
-                    console.log(`💱 Executing SELL: ${sellAmount.toFixed(8)} ${tokenInfo.symbol} ($${sellValueUSD.toFixed(2)}) → USDC`);
-
-                    try {
-                        const sellTx = await agentVault.executeSell(
-                            agentIdBytes32,
-                            userAddress,
-                            tokenInfo.address,
-                            amountIn,
-                            0
-                        );
-                        const receipt = await sellTx.wait();
-                        txHash = receipt.hash;
-                        tokensTraded = sellAmount;
-                        recordTrade(agentId, 'SELL');
-                        console.log(`✅ SELL executed! Tx: ${txHash}`);
-                    } catch (sellError) {
-                        console.error(`❌ SELL failed:`, sellError.message);
-                        tradeError = sellError.message;
-                    }
-                }
-            }
-
-            // Refresh balances
-            if (txHash) {
-                const newPositions = await getAgentPositions(userAddress, agentId, tokenInfo.address, tokenInfo.decimals);
-                newBalance = newPositions.usdcBalance;
-            }
+            // NOTE: Polygon Amoy AgentVault is a deposit/withdraw vault.
+            // On-chain trade execution (executeBuy/executeSell) is not available
+            // in this vault version. The AI decision is returned to the frontend
+            // for display. Future: implement SimpleDEX calls from the operator wallet.
+            console.log(`ℹ️  Decision: ${decision.action} — vault does not support on-chain execution in this version.`);
+            tradeError = 'On-chain execution not available in this vault version. Decision is advisory.';
         }
 
         res.json({
@@ -827,71 +761,19 @@ app.post('/api/smart-trade', async (req, res) => {
 });
 
 /**
- * Legacy execute-trade endpoint (still works with AgentVaultV2)
+ * Legacy execute-trade endpoint
+ * Note: Polygon Amoy AgentVault does not support executeBuy/executeSell.
+ * Returns a 501 with explanation.
  */
 app.post('/api/execute-trade', async (req, res) => {
-    try {
-        const { action, symbol, amountUSDC, agentId, userAddress } = req.body;
-
-        console.log(`\n${'='.repeat(50)}`);
-        console.log(`📊 Executing ${action} for ${amountUSDC} USDC on ${symbol}`);
-
-        if (!agentId || !userAddress) {
-            return res.status(400).json({ error: 'agentId and userAddress required' });
-        }
-
-        const tokenInfo = TOKENS[symbol];
-        if (!tokenInfo) {
-            return res.status(400).json({ error: 'Unsupported token', symbol });
-        }
-
-        const agentVault = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_V2_ABI, wallet);
-        const agentIdBytes32 = uuidToBytes32(agentId);
-
-        let txHash = null;
-
-        if (action === 'BUY') {
-            const amountIn = ethers.parseUnits(amountUSDC.toFixed(6), 6);
-            console.log(`🛒 Buying ${tokenInfo.symbol} via AgentVaultV2...`);
-            const buyTx = await agentVault.executeBuy(
-                agentIdBytes32, userAddress, tokenInfo.address, amountIn, 0
-            );
-            const receipt = await buyTx.wait();
-            txHash = receipt.hash;
-            console.log(`✅ BUY complete! Tx: ${txHash}`);
-
-        } else if (action === 'SELL') {
-            const tokenBalance = await agentVault.getUserAgentTokenBalance(userAddress, agentIdBytes32, tokenInfo.address);
-            if (tokenBalance === 0n) {
-                return res.status(400).json({ error: `No ${tokenInfo.symbol} to sell` });
-            }
-            console.log(`💱 Selling ${tokenInfo.symbol} via AgentVaultV2...`);
-            const sellTx = await agentVault.executeSell(
-                agentIdBytes32, userAddress, tokenInfo.address, tokenBalance, 0
-            );
-            const receipt = await sellTx.wait();
-            txHash = receipt.hash;
-            console.log(`✅ SELL complete! Tx: ${txHash}`);
-        }
-
-        const newBalance = await agentVault.getUserAgentBalance(userAddress, agentIdBytes32);
-
-        res.json({
-            success: true,
-            action,
-            symbol: tokenInfo.symbol,
-            txHash,
-            newBalance: parseFloat(ethers.formatUnits(newBalance, 6)),
-        });
-
-    } catch (error) {
-        console.error('❌ Trade error:', error);
-        res.status(500).json({ error: 'Trade failed', details: error.message });
-    }
+    res.status(501).json({
+        error: 'On-chain trade execution not available in Polygon Amoy vault.',
+        message: 'The AgentVault on Polygon Amoy is a deposit/withdraw vault only. Use /api/smart-trade for AI decisions.'
+    });
 });
 
 /**
- * Get agent balances
+ * Get agent balances — USDC only (Polygon Amoy vault)
  */
 app.get('/api/agent-balances/:userAddress/:agentId', async (req, res) => {
     try {
@@ -901,17 +783,11 @@ app.get('/api/agent-balances/:userAddress/:agentId', async (req, res) => {
 
         const usdcBalance = await agentVault.getUserAgentBalance(userAddress, agentIdBytes32);
 
-        const tokenBalances = {};
-        for (const [name, info] of Object.entries(TOKENS)) {
-            const balance = await agentVault.getUserAgentTokenBalance(userAddress, agentIdBytes32, info.address);
-            tokenBalances[info.symbol] = parseFloat(ethers.formatUnits(balance, info.decimals));
-        }
-
         res.json({
             agentId,
             userAddress,
             usdc: parseFloat(ethers.formatUnits(usdcBalance, 6)),
-            tokens: tokenBalances
+            tokens: {} // Token balances not tracked in Polygon Amoy vault
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -923,14 +799,13 @@ app.get('/api/agent-balances/:userAddress/:agentId', async (req, res) => {
  */
 app.get('/api/health', async (req, res) => {
     try {
-        const agentVault = new ethers.Contract(CONTRACTS.AGENT_VAULT_V2, AGENT_VAULT_V2_ABI, wallet);
-        const operator = await agentVault.operator();
-
+        const blockNumber = await provider.getBlock('latest').then(b => b?.number ?? 0);
         res.json({
             status: 'ok',
             version: 'V5-INSTITUTIONAL-PRO',
+            network: 'Polygon Amoy',
             tradingWallet: wallet.address,
-            isOperator: operator.toLowerCase() === wallet.address.toLowerCase(),
+            latestBlock: blockNumber,
             contracts: { agentVaultV2: CONTRACTS.AGENT_VAULT_V2, simpleDex: CONTRACTS.SIMPLE_DEX },
             proModules: ['EMA-Stack-9/21/55/89', 'Volume-Weighted', 'RSI-Divergence', 'MACD-Momentum',
                 'Bollinger-Squeeze', 'ATR-Risk-Sizer', 'Smart-Money-Concepts', 'Ichimoku-Cloud', 'Market-Structure'],

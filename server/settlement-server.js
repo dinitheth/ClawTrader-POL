@@ -36,6 +36,10 @@ const ESCROW_ABI = [
 ];
 
 // ── Setup ────────────────────────────────────────────────────────
+if (!process.env.TRADING_WALLET_PRIVATE_KEY) {
+    console.error('\n❌ TRADING_WALLET_PRIVATE_KEY is not set in .env — settlement server cannot sign transactions.');
+    process.exit(1);
+}
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(process.env.TRADING_WALLET_PRIVATE_KEY, provider);
 const escrow = new ethers.Contract(BETTING_ESCROW_ADDRESS, ESCROW_ABI, wallet);
@@ -125,7 +129,10 @@ async function settleMatchOnChain(matchId, winnerTeamId, matchName) {
 
     try {
         log('settle', `Settling: ${matchName}`, { matchId, winnerTeamId });
-        const tx = await escrow.settleMatch(matchId, winnerTeamId);
+        const tx = await escrow.settleMatch(matchId, winnerTeamId, {
+            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 gwei
+            maxFeePerGas: BigInt(60_000_000_000),         // 60 gwei
+        });
         log('info', `Tx sent: ${tx.hash}`);
 
         const receipt = await tx.wait();
@@ -155,7 +162,10 @@ async function cancelMatchOnChain(matchId, matchName) {
 
     try {
         log('warn', `Cancelling: ${matchName}`, { matchId });
-        const tx = await escrow.cancelMatch(matchId);
+        const tx = await escrow.cancelMatch(matchId, {
+            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 gwei
+            maxFeePerGas: BigInt(60_000_000_000),         // 60 gwei
+        });
         const receipt = await tx.wait();
         if (receipt.status === 1) {
             log('settle', `✅ Cancelled, bets refunded`, { matchId });
