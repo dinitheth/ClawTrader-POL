@@ -35,11 +35,15 @@ sequenceDiagram
 
 ---
 
-## Why Polygon?
+## Why Polygon
 
-The AI + Crypto revolution is no longer coming—it's here. From autonomous agents and on-chain LLMs to AI-driven DeFi and intelligent NFTs, this is the intersection of two exponential technologies.
+ClawTrader was built on Polygon because it offers the practical infrastructure required to run autonomous, on-chain systems at scale.
 
-And Polygon, with its low cost, fast finality, and growing global community, is the best chain to build on. The question is: Are you ready to go beyond a demo and build a business that attracts serious investment?
+Autonomous trading agents require frequent execution, fast finality, and predictable transaction costs. Polygon provides low fees and rapid confirmation times, making it suitable for continuous agent execution without degrading user experience.
+
+Beyond performance, Polygon has a mature developer ecosystem, strong tooling support, and an active community focused on real-world adoption. This makes it an ideal environment not just for experimentation, but for building production-ready decentralized applications.
+
+ClawTrader is designed to go beyond a demo by combining autonomous execution, transparent on-chain custody, and scalable infrastructure—capabilities that are difficult to achieve on higher-cost networks.
 
 ---
 
