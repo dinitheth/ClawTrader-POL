@@ -1,39 +1,50 @@
 # ClawTrader
 
-ClawTrader is a decentralized AI trading arena built on the Polygon Amoy network. Users create autonomous trading agents with customizable Strategy DNA, compete in markets, and trade cryptocurrencies through AI-driven decisions powered by on-chain smart contracts.
+ClawTrader is a decentralized AI trading arena built on the Polygon Amoy network. Users create autonomous trading agents with customizable "Strategy DNA", compete in markets, and trade cryptocurrencies through AI-driven decisions powered by on-chain smart contracts.
 
-## Data Flow Summary
+---
 
-The following sequence diagram illustrates the core auto-trading loop of ClawTrader.
+## What is ClawTrader?
+
+ClawTrader revolves around three simple, powerful features:
+
+### 1. Create AI Agents
+You can create an AI trader tailored to your style. You choose its DNA: how aggressive it is, its risk tolerance, and how it reads the market. All agents and their unique DNA are stored securely on the blockchain.
+
+```mermaid
+graph LR
+    User([User]) -->|Designs DNA & Personality| Factory[AgentFactory Contract]
+    Factory -->|Mints DNA on-chain| Agent((AI Agent))
+    Agent -->|Ready to Trade!| Market
+```
+
+### 2. Autonomous Trading
+Once your agent is created, you fund its personal smart contract vault with USDC. Then, the AI takes over! It scans the market every 30 seconds, decides whether to Buy, Sell, or Hold, and executes trades on a decentralized exchange entirely on its own.
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant Frontend
-    participant TradingServer
-    participant AgentVaultV2
-    participant SimpleDEX
-    participant Supabase
-    participant CoinGecko
-
-    User->>Frontend: Start Auto Trade
-    loop every 30s
-        Frontend->>TradingServer: POST /api/smart-trade [agentId, userAddress, DNA]
-        TradingServer->>CoinGecko: Fetch market data
-        TradingServer->>AgentVaultV2: Read USDC + token balances
-        TradingServer->>TradingServer: makeSmartDecision()
-        alt BUY signal
-            TradingServer->>AgentVaultV2: executeBuy()
-            AgentVaultV2->>SimpleDEX: buyToken()
-        else SELL signal
-            TradingServer->>AgentVaultV2: executeSell()
-            AgentVaultV2->>SimpleDEX: sellToken()
-        end
-        TradingServer-->>Frontend: decision + txHash + balances
-        TradingServer->>Supabase: Update agent record
-        Frontend->>Frontend: Update trade history + PnL
-    end
+    participant Agent Vault
+    participant Trading AI
+    participant Crypto Market
+    
+    Trading AI->>Crypto Market: Scans prices every 30s
+    Trading AI-->>Trading AI: Thinks: "Good time to buy BTC?"
+    Trading AI->>Agent Vault: "Yes, BUY!"
+    Agent Vault->>Crypto Market: Executes trade with your USDC
 ```
+
+### 3. Esports Betting Arena
+Use your profits (or specifically our platform token, CLAW) to place bets on live esports matches. The platform pulls real-world match data (League of Legends, CS2, etc.) and uses smart contracts to hold the bets fairly until a winner is decided.
+
+```mermaid
+graph TD
+    User1[User A] -->|Bets 50 CLAW on Team X| Escrow[Betting Escrow Contract]
+    User2[User B] -->|Bets 50 CLAW on Team Y| Escrow
+    API[Live Match API] -.->|Declares Team X Winner| Escrow
+    Escrow -->|Pays out 100 CLAW| User1
+```
+
+---
 
 ## Smart Contracts (Polygon Amoy Testnet)
 
