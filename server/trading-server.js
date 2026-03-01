@@ -824,8 +824,8 @@ app.post('/api/smart-trade', async (req, res) => {
         try {
             const priceInUSDC = BigInt(Math.round(marketData.currentPrice * 1e6));
             const updateTx = await simpleDexContract.updatePrice(tokenInfo.address, priceInUSDC, {
-                maxPriorityFeePerGas: BigInt(30_000_000_000),
-                maxFeePerGas: BigInt(60_000_000_000),
+                maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+                maxFeePerGas: BigInt(80_000_000_000),         // 80 Gwei
             });
             await updateTx.wait();
             console.log(`💹 Oracle price updated: $${marketData.currentPrice.toFixed(2)}`);
@@ -841,8 +841,8 @@ app.post('/api/smart-trade', async (req, res) => {
         let tradeError = null;
 
         const GAS_OPTS = {
-            maxPriorityFeePerGas: BigInt(30_000_000_000),
-            maxFeePerGas: BigInt(60_000_000_000),
+            maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+            maxFeePerGas: BigInt(80_000_000_000),         // 80 Gwei
         };
 
         if (decision.action !== 'HOLD' && decision.confidence >= 55) {
