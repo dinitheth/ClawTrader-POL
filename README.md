@@ -41,9 +41,9 @@ ClawTrader was built on Polygon because it offers the practical infrastructure r
 
 Autonomous trading agents require frequent execution, fast finality, and predictable transaction costs. Polygon provides low fees and rapid confirmation times, making it suitable for continuous agent execution without degrading user experience.
 
-Beyond performance, Polygon has a mature developer ecosystem, strong tooling support, and an active community focused on real-world adoption. This makes it an ideal environment not just for experimentation, but for building production-ready decentralized applications.
+Beyond performance, Polygon has a mature developer ecosystem, strong tooling support, and an active community focused on real-world adoption. This makes it an ideal environment not just for experimentation, but for building production ready decentralized applications.
 
-ClawTrader is designed to go beyond a demo by combining autonomous execution, transparent on-chain custody, and scalable infrastructure—capabilities that are difficult to achieve on higher-cost networks.
+ClawTrader is designed to go beyond a demo by combining autonomous execution, transparent on-chain custody, and scalable infrastructure capabilities that are difficult to achieve on higher cost networks.
 
 ---
 
