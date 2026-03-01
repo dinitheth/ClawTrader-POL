@@ -7,9 +7,11 @@ interface LatestDecisionCardProps {
   decision: TradingDecision | null;
   agentName?: string;
   timestamp?: string;
+  /** When true, uses a compact horizontal layout with fixed height */
+  horizontal?: boolean;
 }
 
-export function LatestDecisionCard({ decision, agentName, timestamp }: LatestDecisionCardProps) {
+export function LatestDecisionCard({ decision, agentName, timestamp, horizontal }: LatestDecisionCardProps) {
   const getActionColor = (action: string) => {
     switch (action) {
       case 'BUY': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50';
@@ -32,19 +34,23 @@ export function LatestDecisionCard({ decision, agentName, timestamp }: LatestDec
     return 'text-red-400';
   };
 
+  /* ── EMPTY STATE ── */
   if (!decision) {
     return (
-      <Card className="border-muted/50 bg-gradient-to-br from-muted/10 to-transparent">
-        <CardHeader className="pb-3">
+      <Card
+        className="border-muted/50 bg-gradient-to-br from-muted/10 to-transparent overflow-hidden"
+        style={horizontal ? { height: '200px' } : undefined}
+      >
+        <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Zap className="w-4 h-4 text-muted-foreground" />
             Latest AI Decision
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center mb-3">
-              <Brain className="w-6 h-6 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <div className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center mb-2">
+              <Brain className="w-5 h-5 text-muted-foreground" />
             </div>
             <p className="text-sm text-muted-foreground">No analysis yet</p>
             <p className="text-xs text-muted-foreground mt-1">Click "Analyze" or enable "Auto Trade"</p>
@@ -54,6 +60,72 @@ export function LatestDecisionCard({ decision, agentName, timestamp }: LatestDec
     );
   }
 
+  /* ── HORIZONTAL / WIDE layout (right column) ── */
+  if (horizontal) {
+    return (
+      <Card
+        className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden"
+        style={{ height: '220px' }}
+      >
+        <CardHeader className="pb-1 pt-3 px-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              Latest AI Decision
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              {agentName && <span className="text-xs text-muted-foreground">by {agentName}</span>}
+              {timestamp && (
+                <span className="text-xs text-muted-foreground">
+                  {new Date(timestamp).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="px-4 pb-3 pt-2 space-y-2 overflow-hidden">
+          {/* Row 1: Action badge + Confidence */}
+          <div className="flex items-center gap-3">
+            <Badge className={`text-base px-3 py-1.5 flex items-center gap-1.5 ${getActionColor(decision.action)}`}>
+              {getActionIcon(decision.action)}
+              <span className="font-bold">{decision.action}</span>
+            </Badge>
+            <div>
+              <div className={`text-xl font-bold ${getConfidenceColor(decision.confidence)}`}>
+                {decision.confidence.toFixed(1)}%
+              </div>
+              <div className="text-[10px] text-muted-foreground">Confidence</div>
+            </div>
+            {/* Position Size pill */}
+            <div className="ml-auto text-center px-3 py-1 rounded-lg bg-muted/30 border border-border/30">
+              <div className="text-[10px] text-muted-foreground">Size</div>
+              <div className="font-mono font-semibold text-sm">{Number(decision.suggestedAmount).toFixed(1)}%</div>
+            </div>
+          </div>
+
+          {/* Row 2: AI Reasoning (truncated 2 lines) */}
+          <div className="p-2 rounded-lg bg-muted/30 border border-border/50">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Brain className="w-3 h-3 text-primary shrink-0" />
+              <span className="text-[10px] font-medium text-muted-foreground">AI Reasoning</span>
+            </div>
+            <p className="text-xs leading-relaxed line-clamp-2">{decision.reasoning}</p>
+          </div>
+
+          {/* Row 3: Technical Analysis (1 line) */}
+          {decision.technicalAnalysis && (
+            <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-lg bg-muted/20 border border-border/30">
+              <Target className="w-3 h-3 text-secondary shrink-0 mt-0.5" />
+              <p className="text-[10px] text-muted-foreground truncate">{decision.technicalAnalysis}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  /* ── VERTICAL / DEFAULT layout (original) ── */
   return (
     <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
       <CardHeader className="pb-3">

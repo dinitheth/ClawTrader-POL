@@ -228,6 +228,8 @@ export function FaucetButton() {
       address: CONTRACTS.USDC.address,
       abi: FAUCET_ABI,
       functionName: 'faucet',
+      maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+      maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
     });
   };
 

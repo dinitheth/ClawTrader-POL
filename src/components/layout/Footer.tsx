@@ -41,14 +41,6 @@ const Footer = () => {
                         <h3 className="font-semibold text-sm uppercase tracking-wider text-foreground">Resources</h3>
                         <nav className="flex flex-col gap-2.5">
                             <a
-                                href="https://clawtrader.notion.site/documentation"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                Documentation
-                            </a>
-                            <a
                                 href="https://github.com/dinitheth/ClawTrader-V2"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -63,14 +55,6 @@ const Footer = () => {
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Polygon Amoy Explorer
-                            </a>
-                            <a
-                                href="https://nad.fun/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                nad.fun
                             </a>
                         </nav>
                     </div>

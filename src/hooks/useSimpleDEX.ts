@@ -47,6 +47,10 @@ export function useSimpleDEX() {
             abi: USDC_ABI,
             functionName: 'approve',
             args: [CONTRACTS.SIMPLE_DEX.address, amount],
+            chain: polygonAmoy,
+            account: userAddress,
+            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
         });
         setPendingTxHash(hash);
         return hash;
@@ -62,6 +66,10 @@ export function useSimpleDEX() {
             abi: ERC20_ABI,
             functionName: 'approve',
             args: [CONTRACTS.SIMPLE_DEX.address, amount],
+            chain: polygonAmoy,
+            account: userAddress,
+            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
         });
         setPendingTxHash(hash);
         return hash;
@@ -93,6 +101,10 @@ export function useSimpleDEX() {
             abi: SIMPLE_DEX_ABI,
             functionName: 'buyToken',
             args: [token.address, amountIn, minAmountOut],
+            chain: polygonAmoy,
+            account: userAddress,
+            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
         });
 
         setPendingTxHash(hash);
@@ -125,6 +137,10 @@ export function useSimpleDEX() {
             abi: SIMPLE_DEX_ABI,
             functionName: 'sellToken',
             args: [token.address, amountIn, minAmountOut],
+            chain: polygonAmoy,
+            account: userAddress,
+            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
         });
 
         setPendingTxHash(hash);

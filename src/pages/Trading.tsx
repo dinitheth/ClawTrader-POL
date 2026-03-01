@@ -88,21 +88,23 @@ const Trading = () => {
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [showClearTradesDialog, setShowClearTradesDialog] = useState(false);
 
-  const [trades, setTrades] = useState<Trade[]>(() => {
-    // Load persisted trades from localStorage on initial render
-    if (typeof window !== 'undefined') {
-      const agentId = new URLSearchParams(window.location.search).get('agent');
-      const savedTrades = localStorage.getItem(`trades_${agentId}`);
+  const [trades, setTrades] = useState<Trade[]>([]);
+
+  // Sync trades when agent changes
+  useEffect(() => {
+    if (selectedAgentId) {
+      const savedTrades = localStorage.getItem(`trades_${selectedAgentId}`);
       if (savedTrades) {
         try {
-          return JSON.parse(savedTrades);
+          setTrades(JSON.parse(savedTrades));
         } catch {
-          return [];
+          setTrades([]);
         }
+      } else {
+        setTrades([]);
       }
     }
-    return [];
-  });
+  }, [selectedAgentId]);
   const [analysisHistory, setAnalysisHistory] = useState<Array<{
     timestamp: string;
     symbol: string;
@@ -186,13 +188,20 @@ const Trading = () => {
     }
   }, [selectedAgentId, newVaultBalance]);
 
-  // Load trades from localStorage when agent changes (only if new vault has real balance)
+  // Load trades from localStorage when agent changes — filter out fake trades (no txHash)
   useEffect(() => {
     if (selectedAgentId && newVaultBalance > 0) {
       const savedTrades = localStorage.getItem(`trades_${selectedAgentId}`);
       if (savedTrades) {
         try {
-          setTrades(JSON.parse(savedTrades));
+          const parsed: Trade[] = JSON.parse(savedTrades);
+          // Only keep trades that have an actual on-chain txHash — discard demo/fake trades
+          const realTrades = parsed.filter(t => !!t.txHash);
+          if (realTrades.length !== parsed.length) {
+            // Some fake trades were purged — update storage
+            localStorage.setItem(`trades_${selectedAgentId}`, JSON.stringify(realTrades));
+          }
+          setTrades(realTrades);
         } catch {
           setTrades([]);
         }
@@ -457,9 +466,12 @@ const Trading = () => {
         // Use actual trade amount from server if available, else calculate estimate
         const currentPrice = data.marketData?.currentPrice || 0;
         const tokensTraded = trade?.tokensTraded || 0;
-        const actualUsdcAmount = tokensTraded > 0 && currentPrice > 0
-          ? tokensTraded * currentPrice  // Actual trade value
-          : positions?.usdcBalance * (tradeDecision.suggestedAmount / 100) || 0;  // Fallback estimate
+        const usdcTraded = trade?.usdcTraded || 0;
+        const actualUsdcAmount = usdcTraded > 0
+          ? usdcTraded
+          : tokensTraded > 0 && currentPrice > 0
+            ? tokensTraded * currentPrice  // Fallback 1: price inference (inaccurate due to fees)
+            : positions?.usdcBalance * (tradeDecision.suggestedAmount / 100) || 0;  // Fallback 2: DNA estimate
 
         const newTrade: Trade = {
           id: crypto.randomUUID(),
@@ -472,8 +484,14 @@ const Trading = () => {
           txHash: txHash || undefined,
         };
 
-        if (tradeDecision.action !== 'HOLD') {
-          setTrades(prev => [newTrade, ...prev]);
+        // Only record in history if the trade actually landed on-chain
+        if (tradeDecision.action !== 'HOLD' && onChain && txHash) {
+          setTrades(prev => {
+            const updated = [newTrade, ...prev];
+            // Persist to localStorage so it survives refresh
+            localStorage.setItem(`trades_${selectedAgent.id}`, JSON.stringify(updated));
+            return updated;
+          });
         }
 
         // Show notification
@@ -511,7 +529,7 @@ const Trading = () => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isAutoTrading, selectedAgent?.id, onChainBalance, symbol, toast]);
+  }, [isAutoTrading, selectedAgent, onChainBalance, symbol, toast]);
 
   const handleFundAgent = async (_amount: number) => {
     // After on-chain deposit completes, just refetch the vault balance
@@ -590,28 +608,28 @@ const Trading = () => {
 
         {/* News Ticker */}
         <NewsTicker />
-        {/* ── 3-column layout: Left=Agent+AI | Center=Chart | Right=Trades ── */}
+
         <div className="container mx-auto px-4 py-4 md:py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr_340px] gap-4 md:gap-5 items-start">
 
-            {/* ── LEFT: Agent Panel + Latest AI Decision ── */}
-            <div className="lg:col-span-1 space-y-4">
+            {/* LEFT COLUMN: Agent Selector only */}
+            <div className="space-y-4">
 
-              {/* Agent Selector Card */}
-              <Card>
-                <CardHeader className="pb-2">
+              {/* Agent Selector */}
+              <Card className="h-[640px] overflow-y-auto">
+                <CardHeader className="pb-2 md:pb-3">
                   <CardTitle className="text-xs md:text-sm flex items-center gap-2">
                     <Bot className="w-4 h-4" />
                     Select Trading Agent
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 md:space-y-4">
                   {isLoadingAgents ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-5 h-5 animate-spin" />
                     </div>
                   ) : agents.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">
+                    <p className="text-xs md:text-sm text-muted-foreground text-center py-4">
                       No agents created yet. Create one to start trading!
                     </p>
                   ) : (
@@ -636,12 +654,12 @@ const Trading = () => {
                   )}
 
                   {selectedAgent && (
-                    <div className="p-2 rounded-lg bg-muted/30 space-y-2">
+                    <div className="p-2 md:p-3 rounded-lg bg-muted/30 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{selectedAgent.avatar}</span>
+                        <span className="text-xl md:text-2xl">{selectedAgent.avatar}</span>
                         <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{selectedAgent.name}</p>
-                          <p className="text-[10px] text-muted-foreground capitalize">{selectedAgent.personality}</p>
+                          <p className="font-medium text-sm md:text-base truncate">{selectedAgent.name}</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground capitalize">{selectedAgent.personality}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-5 gap-1 text-center">
@@ -653,18 +671,20 @@ const Trading = () => {
                           { label: 'CTR', value: selectedAgent.dna_contrarian_bias },
                         ].map(stat => (
                           <div key={stat.label}>
-                            <div className="text-[9px] text-muted-foreground">{stat.label}</div>
-                            <div className="text-xs font-mono">{Math.round(Number(stat.value) * 100)}</div>
+                            <div className="text-[9px] md:text-xs text-muted-foreground">{stat.label}</div>
+                            <div className="text-xs md:text-sm font-mono">{Math.round(Number(stat.value) * 100)}</div>
                           </div>
                         ))}
                       </div>
 
                       {/* On-Chain Balance */}
-                      <div className="pt-2 border-t border-border/50">
+                      <div className="mt-3 pt-3 border-t border-border/50">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">On-Chain Balance</span>
+                          <span className="text-xs text-muted-foreground">
+                            {(onChainBalance as any).newVaultBalance > 0 ? 'Active Vault Balance' : 'On-Chain Balance'}
+                          </span>
                           <div className="text-right">
-                            <span className="text-base font-mono font-bold text-primary">
+                            <span className="text-lg font-mono font-bold text-primary">
                               {onChainBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span className="text-xs text-muted-foreground ml-1">USDC</span>
@@ -672,16 +692,21 @@ const Trading = () => {
                         </div>
                         {onChainBalance > 0 && (onChainBalance as any).newVaultBalance === 0 && (
                           <div className="mt-2 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-400">
-                            ⚠️ Old vault funds detected. Withdraw and re-deposit to enable trading.
+                            ⚠️ Your USDC is in the <b>old vault</b>. To enable real trading:<br />
+                            1. Click <b>Withdraw</b> → withdraw all USDC<br />
+                            2. Click <b>Fund Agent</b> → deposit into new vault
                           </div>
                         )}
                       </div>
 
                       {/* Realized PnL */}
-                      <div className="flex items-center justify-between">
+                      <div className="mt-2 flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Realized PnL</span>
                         <div className="text-right">
-                          <span className="text-base font-mono font-bold" style={{ color: pnlData.realizedPnL >= 0 ? '#16c784' : '#ea3943' }}>
+                          <span
+                            className="text-lg font-mono font-bold"
+                            style={{ color: pnlData.realizedPnL >= 0 ? '#16c784' : '#ea3943' }}
+                          >
                             {pnlData.realizedPnL >= 0 ? '+' : ''}{pnlData.realizedPnL.toFixed(2)}
                           </span>
                           <span className="text-xs text-muted-foreground ml-1">USDC</span>
@@ -690,14 +715,14 @@ const Trading = () => {
 
                       {/* Trade Stats */}
                       {pnlData.totalTrades > 0 && (
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                           <span>Trades: {pnlData.totalTrades}</span>
                           <span className="flex gap-2 items-center">
                             <span style={{ color: '#16c784' }}>↑{pnlData.buyTrades}</span>
                             <span style={{ color: '#ea3943' }}>↓{pnlData.sellTrades}</span>
                             <button
                               onClick={() => setShowClearTradesDialog(true)}
-                              className="ml-1 p-1 rounded hover:bg-muted/30 text-muted-foreground hover:text-destructive transition-colors"
+                              className="ml-2 p-1 rounded hover:bg-muted/30 text-muted-foreground hover:text-destructive transition-colors"
                               title="Clear trade history"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -711,25 +736,63 @@ const Trading = () => {
                   {/* Action Buttons */}
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={() => setShowFundModal(true)} disabled={!selectedAgent} variant="outline" className="gap-1 text-xs" size="sm">
-                        <Wallet className="w-3 h-3" /> Fund Agent
+                      <Button
+                        onClick={() => setShowFundModal(true)}
+                        disabled={!selectedAgent || isAutoTrading}
+                        variant="outline"
+                        className="gap-1 md:gap-2 text-xs md:text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        size="sm"
+                        title={isAutoTrading ? 'Stop auto-trading before funding' : undefined}
+                      >
+                        <Wallet className="w-3 h-3 md:w-4 md:h-4" />
+                        Fund Agent
                       </Button>
-                      <Button onClick={() => setShowWithdrawModal(true)} disabled={!selectedAgent || onChainBalance <= 0} variant="outline" className="gap-1 text-xs" size="sm">
-                        <ArrowDown className="w-3 h-3" /> Withdraw
+                      <Button
+                        onClick={() => setShowWithdrawModal(true)}
+                        disabled={!selectedAgent || onChainBalance <= 0 || isAutoTrading}
+                        variant="outline"
+                        className="gap-1 md:gap-2 text-xs md:text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        size="sm"
+                        title={isAutoTrading ? 'Stop auto-trading before withdrawing' : undefined}
+                      >
+                        <ArrowDown className="w-3 h-3 md:w-4 md:h-4" />
+                        Withdraw
                       </Button>
                     </div>
+
                     <div className="grid grid-cols-2 gap-2">
-                      <Button onClick={() => handleAnalyze()} disabled={!selectedAgent || isAnalyzing || isAutoTrading} variant="outline" className="gap-1 text-xs" size="sm">
-                        {isAnalyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3" />}
+                      <Button
+                        onClick={() => handleAnalyze()}
+                        disabled={!selectedAgent || isAnalyzing || isAutoTrading}
+                        variant="outline"
+                        className="gap-1 md:gap-2 text-xs md:text-sm"
+                        size="sm"
+                      >
+                        {isAnalyzing ? (
+                          <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
+                        ) : (
+                          <Brain className="w-3 h-3 md:w-4 md:h-4" />
+                        )}
                         Analyze
                       </Button>
+
                       <Button
                         onClick={toggleAutoTrading}
                         disabled={!selectedAgent || (!isAutoTrading && onChainBalance <= 0)}
-                        className={`gap-1 text-xs ${isAutoTrading ? 'bg-destructive hover:bg-destructive/90' : 'bg-gradient-to-r from-primary to-secondary'}`}
+                        className={`gap-1 md:gap-2 text-xs md:text-sm ${isAutoTrading ? 'bg-destructive hover:bg-destructive/90' : 'bg-gradient-to-r from-primary to-secondary'}`}
                         size="sm"
                       >
-                        {isAutoTrading ? <><Square className="w-3 h-3" /> Stop</> : <><Play className="w-3 h-3" /> Auto Trade</>}
+                        {isAutoTrading ? (
+                          <>
+                            <Square className="w-3 h-3 md:w-4 md:h-4" />
+                            Stop
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3 h-3 md:w-4 md:h-4" />
+                            Auto Trade
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -737,41 +800,47 @@ const Trading = () => {
                   {/* Auto Trading Status */}
                   {isAutoTrading && (
                     <div className="p-2 rounded-lg bg-accent/10 border border-accent/30 text-center">
-                      <div className="flex items-center justify-center gap-2 text-accent text-xs">
-                        <Activity className="w-3 h-3 animate-pulse" />
+                      <div className="flex items-center justify-center gap-2 text-accent text-xs md:text-sm">
+                        <Activity className="w-3 h-3 md:w-4 md:h-4 animate-pulse" />
                         <span>Auto trading active</span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Executing every 30 seconds</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
+                        Executing every 30 seconds
+                      </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Latest AI Decision — bottom of left column */}
-              <LatestDecisionCard
-                decision={decision}
-                agentName={selectedAgent?.name}
-                timestamp={analysisHistory[0]?.timestamp}
-              />
             </div>
 
-            {/* ── CENTER: Chart (wide, full height) ── */}
-            <div className="lg:col-span-2">
+            {/* CENTER COLUMN: Chart fixed height */}
+            <div>
               <Card className="overflow-hidden">
-                <div className="h-[520px] md:h-[580px]">
+                <div className="h-[640px]">
                   <TradingViewChart
                     symbol={symbol}
                     interval={chartInterval}
                     theme={theme === 'dark' ? 'dark' : 'light'}
-                    height={580}
+                    height={640}
                     autosize={true}
                   />
                 </div>
               </Card>
             </div>
 
-            {/* ── RIGHT: Recent Trades ── */}
-            <div className="lg:col-span-1 space-y-4">
+            {/* RIGHT COLUMN: Latest AI Decision (horizontal, fixed) + Recent Trades (fixed) */}
+            <div className="space-y-4">
+
+              {/* AI Decision — wide horizontal layout, fixed height */}
+              <LatestDecisionCard
+                decision={decision}
+                agentName={selectedAgent?.name}
+                timestamp={analysisHistory[0]?.timestamp}
+                horizontal
+              />
+
+              {/* Recent Trades — fixed height, scrollable */}
               <RecentTrades trades={trades} tradePnLMap={pnlData.tradePnLMap} />
 
               {/* No Balance Warning */}
@@ -782,9 +851,16 @@ const Trading = () => {
                       <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-warning text-sm">Fund Your Agent</p>
-                        <p className="text-xs text-muted-foreground mt-1">Add USDC to your agent's vault to enable autonomous trading.</p>
-                        <Button onClick={() => setShowFundModal(true)} size="sm" className="mt-2 gap-1 text-xs">
-                          <Wallet className="w-3 h-3" /> Fund Agent Now
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Add USDC to your agent's vault to enable autonomous trading.
+                        </p>
+                        <Button
+                          onClick={() => setShowFundModal(true)}
+                          size="sm"
+                          className="mt-2 gap-1 text-xs"
+                        >
+                          <Wallet className="w-3 h-3" />
+                          Fund Agent Now
                         </Button>
                       </div>
                     </div>
@@ -796,7 +872,6 @@ const Trading = () => {
           </div>
         </div>
       </div>
-
       {/* Fund Agent Modal */}
       <FundAgentModal
         open={showFundModal}

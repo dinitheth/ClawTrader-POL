@@ -231,6 +231,8 @@ export function useClawBetting() {
                     abi: CLAW_ABI,
                     functionName: 'approve',
                     args: [ESCROW_ADDRESS, amount],
+                    maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+                    maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
                 } as any);
                 // Wait for confirmation
                 if (publicClient) {
@@ -268,6 +270,8 @@ export function useClawBetting() {
                     abi: BETTING_ESCROW_ABI,
                     functionName: 'placeBet',
                     args: [BigInt(matchId), BigInt(teamAId), BigInt(teamBId), BigInt(teamId), amountWei],
+                    maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+                    maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
                 } as any);
 
                 // Wait for confirmation

@@ -122,6 +122,9 @@ export function WithdrawModal({ open, onOpenChange, agent, onWithdrawn }: Withdr
         abi: AGENT_VAULT_ABI,
         functionName: 'withdraw',
         args: [agentIdBytes32, amountWei],
+        // Polygon Amoy requires minimum 30 Gwei priority fee
+        maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
+        maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
       });
     } catch (err) {
       console.error('Withdraw error:', err);

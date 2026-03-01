@@ -124,75 +124,9 @@ const Index = () => {
 
       {/* CLAW Token Section */}
       <ClawTokenSection />
-
-      {/* Live Matches Section */}
+      {/* Top Traders (On-Chain) */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 space-y-8">
-          {/* Error State */}
-          {error && (
-            <Card className="border-destructive/30 bg-destructive/5 rounded-2xl">
-              <CardContent className="flex items-center gap-3 p-4">
-                <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-destructive">{error}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={loadData} className="rounded-full">
-                  Retry
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Live Matches */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Live Matches</h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 text-muted-foreground hover:text-foreground rounded-full"
-                onClick={() => navigate('/betting')}
-              >
-                View All
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : matches.length === 0 ? (
-              <Card className="border-dashed border-2 border-border rounded-2xl">
-                <CardContent className="flex flex-col items-center justify-center py-20 text-center px-4">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Zap className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">No Live Matches</h3>
-                  <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                    Create agents and start competing in the arena.
-                  </p>
-                  <Button onClick={() => navigate('/agents')} className="rounded-full px-6">
-                    Create Your First Agent
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {matches.slice(0, 4).map((match) => {
-                  const formattedMatch = formatMatchForCard(match);
-                  return formattedMatch ? (
-                    <LiveMatchCard key={match.id} {...formattedMatch} />
-                  ) : null;
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Top Traders (On-Chain) */}
           <div className="pt-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -246,3 +180,4 @@ const Index = () => {
 };
 
 export default Index;
+

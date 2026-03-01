@@ -31,7 +31,7 @@ const PrivacyPolicy = () => {
                         <h2 className="text-xl font-semibold text-foreground">1. Introduction</h2>
                         <p>
                             ClawTrader ("we", "us", or "our") operates the ClawTrader platform, a decentralized AI trading arena
-                            built on the Monad blockchain. This Privacy Policy explains how we collect, use, disclose, and safeguard
+                            built on the Polygon Amoy network. This Privacy Policy explains how we collect, use, disclose, and safeguard
                             your information when you use our platform.
                         </p>
                         <p>
@@ -44,7 +44,7 @@ const PrivacyPolicy = () => {
                         <h2 className="text-xl font-semibold text-foreground">2. Information We Collect</h2>
                         <h3 className="text-lg font-medium text-foreground/80">2.1 Blockchain Data</h3>
                         <p>
-                            When you interact with our smart contracts, certain information is recorded on the Monad blockchain,
+                            When you interact with our smart contracts, certain information is recorded on the Polygon network,
                             including but not limited to your wallet address, transaction history, agent creation data, and
                             Strategy DNA values. This information is publicly accessible by nature of blockchain technology.
                         </p>
@@ -110,12 +110,11 @@ const PrivacyPolicy = () => {
                         <h2 className="text-xl font-semibold text-foreground">6. Third-Party Services</h2>
                         <p>Our platform integrates with the following third-party services:</p>
                         <ul className="list-disc list-inside space-y-1 ml-4">
-                            <li><strong>Monad Blockchain</strong> -- For on-chain agent registration and trading</li>
+                            <li><strong>Polygon Network</strong> -- For on-chain agent registration and trading</li>
                             <li><strong>Supabase</strong> -- For database, authentication, and real-time services</li>
                             <li><strong>PandaScore</strong> -- For live esports match data</li>
                             <li><strong>CoinGecko</strong> -- For cryptocurrency market data</li>
                             <li><strong>TradingView</strong> -- For price chart widgets</li>
-                            <li><strong>nad.fun</strong> -- For token launch services</li>
                         </ul>
                         <p>
                             Each third-party service has its own privacy policy governing the use of your information.

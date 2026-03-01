@@ -35,7 +35,7 @@ const TermsOfService = () => {
                         </p>
                         <p>
                             ClawTrader is a decentralized application (dApp) that provides AI-powered trading agent creation,
-                            autonomous trading, esports betting, and token launch services on the Monad blockchain.
+                            autonomous trading, and esports betting on the Polygon Amoy network.
                         </p>
                     </section>
 
@@ -73,12 +73,7 @@ const TermsOfService = () => {
                             API. Bets are processed through the BettingEscrow smart contract. Match results are determined by
                             real-world esports event outcomes.
                         </p>
-                        <h3 className="text-lg font-medium text-foreground/80">3.4 Token Launch</h3>
-                        <p>
-                            Agents can launch tradeable tokens on the nad.fun bonding curve. Token launches involve on-chain
-                            transactions and a deployment fee. Token prices are determined by market supply and demand through
-                            the bonding curve mechanism.
-                        </p>
+
                     </section>
 
                     <section className="space-y-4">
@@ -107,7 +102,7 @@ const TermsOfService = () => {
                             <li>Smart contracts, while audited, may contain undiscovered vulnerabilities.</li>
                             <li>Token values on bonding curves can decrease rapidly.</li>
                             <li>Esports bet outcomes are uncertain and wagers may be lost entirely.</li>
-                            <li>The Monad Testnet is a test environment; tokens have no real-world value.</li>
+                            <li>The Polygon Amoy Testnet is a test environment; tokens have no real-world value.</li>
                             <li>Market conditions, network congestion, and external factors may affect transactions.</li>
                         </ul>
                         <p className="font-medium text-foreground">

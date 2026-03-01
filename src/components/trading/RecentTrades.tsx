@@ -39,16 +39,16 @@ export function RecentTrades({ trades, tradePnLMap = {} }: RecentTradesProps) {
     }
 
     return (
-        <Card>
-            <CardHeader className="pb-2 md:pb-3">
+        <Card style={{ height: '400px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <CardHeader className="pb-2 md:pb-3 flex-shrink-0">
                 <CardTitle className="text-xs md:text-sm flex items-center gap-2">
                     <BarChart3 className="w-3 h-3 md:w-4 md:h-4" />
                     Recent Trades
                     <span className="text-muted-foreground font-normal">({trades.length})</span>
                 </CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="space-y-2 max-h-[250px] md:max-h-[300px] overflow-y-auto">
+            <CardContent className="flex-1 overflow-y-auto pb-3 [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-white/20">
+                <div className="space-y-2">
                     {trades.slice(0, 10).map((trade) => {
                         // Professional exchange colors (Binance/Coinbase style)
                         const isBuy = trade.action === 'BUY';

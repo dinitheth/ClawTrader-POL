@@ -112,8 +112,21 @@ const agentPositions = {};
 
 // Convert UUID to bytes32
 function uuidToBytes32(uuid) {
-    const hex = uuid.replace(/-/g, '');
-    return '0x' + hex.padEnd(64, '0');
+    if (uuid.startsWith('0x') && uuid.length === 66) {
+        return uuid; // Already bytes32
+    }
+    // If it's a standard UUID, strip hyphens
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+        const hex = uuid.replace(/-/g, '');
+        return '0x' + hex.padEnd(64, '0');
+    }
+    // For arbitrary agent names like "VOID-NET", convert string to bytes32 format
+    try {
+        return ethers.encodeBytes32String(uuid.substring(0, 31)); // Max 31 chars for encodeBytes32String
+    } catch (e) {
+        // Fallback to hashing if it's too long
+        return ethers.id(uuid);
+    }
 }
 
 /**
@@ -450,21 +463,34 @@ function scoreProSellSignalsServer(marketData, portfolio, positions, priceHistor
     const ich = analyzeIchimoku(priceHistory || [currentPrice]);
     if (ich.belowCloud) signals.push({ name: 'ICHIMOKU', weight: 2.0, detail: ich.detail });
 
-    // 6. Take profit — price up >= ATR target (weight 2.5)
+    // 6. Hyper Scalp Take profit — price up >= 0.5x ATR target (weight 2.5)
     const atr = getATRProfile(currentPrice, volatility);
-    if (positions.tokenValueUSD > 1 && priceChange24h >= atr.pct * 3) {
-        signals.push({ name: 'TAKE_PROFIT', weight: 2.5, detail: `Take profit: +${priceChange24h.toFixed(1)}% exceeds 2:1 ATR target` });
+    if (positions.tokenValueUSD > 1 && priceChange24h >= atr.pct * 0.5) {
+        signals.push({ name: 'TAKE_PROFIT', weight: 2.5, detail: `Take profit: +${priceChange24h.toFixed(1)}% exceeds 0.5x ATR target (Hyper Scalp)` });
     }
 
-    // 7. Stop loss — ATR breach (weight 3.0)
-    if (positions.tokenValueUSD > 1 && priceChange24h <= -(atr.pct * 1.5)) {
-        signals.push({ name: 'STOP_LOSS', weight: 3.0, detail: `ATR stop breached: ${priceChange24h.toFixed(1)}%` });
+    // 7. Hyper Stop loss — 0.5x ATR breach (weight 3.0)
+    if (positions.tokenValueUSD > 1 && priceChange24h <= -(atr.pct * 0.5)) {
+        signals.push({ name: 'STOP_LOSS', weight: 3.0, detail: `ATR stop breached: ${priceChange24h.toFixed(1)}% (Hyper Tight stop)` });
     }
 
     // 8. Overexposed (weight 1.2)
     if (portfolio.isOverexposed) signals.push({ name: 'OVEREXPOSED', weight: 1.2, detail: `Exposure ${portfolio.exposurePercent.toFixed(0)}% > 60%` });
 
-    // 9. Momentum fade (weight 1.0)
+    // 9. Time Stop — position stalled, exit fast (weight 2.5)
+    if (positions.openPosition?.entryTime) {
+        const holdTimeMs = Date.now() - positions.openPosition.entryTime;
+        if (holdTimeMs > 2 * 60 * 1000) { // 2 minutes!
+            const pnl = positions.tokenValueUSD - positions.openPosition.entryUSDC;
+            if (pnl <= 0) {
+                signals.push({ name: 'TIME_STOP', weight: 2.5, detail: `Time stop: Stalled unprofitable trade for 2+ mins` });
+            } else {
+                signals.push({ name: 'TIME_PROFIT', weight: 2.5, detail: `Time stop: Taking marginal profit after 2+ mins` });
+            }
+        }
+    }
+
+    // 10. Momentum fade (weight 1.0)
     if (priceChange24h > 3 && priceChange1h < -0.5) signals.push({ name: 'MOMENTUM_FADE', weight: 1.0, detail: `1h fade: ${priceChange1h.toFixed(2)}% after rally` });
 
     return signals;
@@ -504,10 +530,10 @@ function makeSmartDecision(marketData, positions, agentDNA, agentId) {
     // Constants
     const MIN_TRADE_USDC = 3;              // Never trade less than $3
     const MAX_TRADES_PER_SESSION = 50;     // High limit — let the engine trade freely
-    const TRADE_COOLDOWN_MS = 60_000;      // 60s cooldown (matches 30s frontend loop)
+    const TRADE_COOLDOWN_MS = 10_000;      // 10s cooldown (fast scalping)
     const MIN_CONFIDENCE = 55;             // Lower bar so more decisions pass
-    const BUY_SCORE_THRESHOLD = 1.0;      // Fire on single strong buy signal
-    const SELL_SCORE_THRESHOLD = 1.0;     // Fire on single strong sell signal
+    const BUY_SCORE_THRESHOLD = 0.7;      // Fire on weak buy signal for scalping
+    const SELL_SCORE_THRESHOLD = 0.5;     // Fire on very weak sell signal to avoid holding
     const MIN_BUY_SIGNALS = 1;            // 1 module is enough to enter
     const MIN_SELL_SIGNALS = 1;           // 1 module is enough to exit
 
@@ -585,6 +611,7 @@ function makeSmartDecision(marketData, positions, agentDNA, agentId) {
     // ─── SELL LOGIC — stop-loss gets priority ───
     const hasStopLoss = sellSignals.some(s => s.name === 'STOP_LOSS');
     const hasTakeProfit = sellSignals.some(s => s.name === 'TAKE_PROFIT');
+    const hasTimeStop = sellSignals.some(s => s.name === 'TIME_STOP' || s.name === 'TIME_PROFIT');
 
     if (positions.hasPosition && positions.tokenValueUSD >= 1) {
         if (hasStopLoss) {
@@ -593,7 +620,10 @@ function makeSmartDecision(marketData, positions, agentDNA, agentId) {
         } else if (hasTakeProfit) {
             action = 'SELL'; confidence = 85;
             suggestedAmount = Math.round(60 + aggressionFactor * 20);
-            reasoning = `💰 PRO TAKE PROFIT (ATR 2:1 target hit). ${sellDetails}. ${portfolioStatus}.`;
+            reasoning = `💰 PRO TAKE PROFIT (ATR 0.5:1 target hit). ${sellDetails}. ${portfolioStatus}.`;
+        } else if (hasTimeStop) {
+            action = 'SELL'; confidence = 85; suggestedAmount = 100;
+            reasoning = `⏱ TIME STOP. ${sellDetails}. Capital reallocation format.`;
         } else if (sellScore >= SELL_SCORE_THRESHOLD && sellSignals.length >= MIN_SELL_SIGNALS) {
             action = 'SELL'; confidence = Math.min(88, 60 + sellScore * 6);
             suggestedAmount = Math.round(40 + aggressionFactor * 20);
@@ -603,7 +633,10 @@ function makeSmartDecision(marketData, positions, agentDNA, agentId) {
 
     // ─── BUY LOGIC (only if not selling) ───
     if (action === 'HOLD' && buyScore >= BUY_SCORE_THRESHOLD && buySignals.length >= MIN_BUY_SIGNALS) {
-        if (portfolio.availableCash < MIN_TRADE_USDC) {
+        if (positions.hasPosition) {
+            reasoning = `⏸ Pro buy setup (score ${buyScore.toFixed(1)}), but already holding a position. Waiting for SELL signal.`;
+            confidence = 55;
+        } else if (portfolio.availableCash < MIN_TRADE_USDC) {
             reasoning = `⏸ Pro buy setup (score ${buyScore.toFixed(1)}, ${buySignals.length} modules), but insufficient cash ($${portfolio.availableCash.toFixed(2)}). ${portfolioStatus}`;
             confidence = 55;
         } else if (portfolio.isOverexposed) {
@@ -804,6 +837,7 @@ app.post('/api/smart-trade', async (req, res) => {
         let txHash = null;
         let newBalance = positions.usdcBalance;
         let tokensTraded = 0;
+        let usdcTraded = 0;
         let tradeError = null;
 
         const GAS_OPTS = {
@@ -819,15 +853,21 @@ app.post('/api/smart-trade', async (req, res) => {
             if (decision.action === 'BUY' && positions.usdcBalance < 3) {
                 console.log(`⏭  BUY skipped — vault USDC balance is $${positions.usdcBalance.toFixed(2)} (need ≥$3). Fund the new vault first.`);
             } else if (decision.action === 'BUY' && positions.usdcBalance >= 3 && !positions.hasPosition) {
-                const buyAmount = positions.usdcBalance * (decision.suggestedAmount / 100);
-                if (buyAmount >= 3) {
-                    const buyAmountWei = BigInt(Math.round(buyAmount * 1e6));
+                // ATR-sized amount may be tiny — clamp to at least $3 so we always execute
+                const atrAmount = positions.usdcBalance * (decision.suggestedAmount / 100);
+                const buyAmount = Math.max(atrAmount, 3); // minimum $3 trade
+
+                // Don't spend more than we have (keep a small MATIC gas buffer)
+                const safeBuyAmount = Math.min(buyAmount, positions.usdcBalance - 0.5);
+
+                if (safeBuyAmount >= 3) {
+                    const buyAmountWei = BigInt(Math.round(safeBuyAmount * 1e6));
                     try {
                         // Get quote first
                         const [expectedOut] = await simpleDexContract.getBuyQuote(tokenInfo.address, buyAmountWei);
                         const minOut = expectedOut * 95n / 100n; // 5% slippage
 
-                        console.log(`⚡ BUY: $${buyAmount.toFixed(2)} vault USDC → ${tokenInfo.symbol} (user: ${userAddress.slice(0, 10)}...)`);
+                        console.log(`⚡ BUY: $${safeBuyAmount.toFixed(2)} vault USDC → ${tokenInfo.symbol} (user: ${userAddress.slice(0, 10)}...)`);
 
                         // operatorBuy with retry on transient RPC errors
                         const tx = await sendWithRetry(() => agentVaultContract.operatorBuy(
@@ -851,17 +891,21 @@ app.post('/api/smart-trade', async (req, res) => {
                             amount: tokensOut,
                             entryPrice: marketData.currentPrice,
                             currentPrice: marketData.currentPrice,
-                            entryUSDC: buyAmount,
+                            entryUSDC: safeBuyAmount,
+                            entryTime: Date.now(), // Track hold time
                         };
 
-                        newBalance = positions.usdcBalance - buyAmount;
+                        newBalance = positions.usdcBalance - safeBuyAmount;
+                        usdcTraded = safeBuyAmount;
                         recordTrade(agentId, 'BUY');
-                        console.log(`✅ REAL BUY on-chain! $${buyAmount.toFixed(2)} vault USDC → ${tokensOut.toFixed(6)} ${tokenInfo.symbol} | Tx: ${txHash}`);
+                        console.log(`✅ REAL BUY on-chain! $${safeBuyAmount.toFixed(2)} vault USDC → ${tokensOut.toFixed(6)} ${tokenInfo.symbol} | Tx: ${txHash}`);
 
                     } catch (err) {
                         tradeError = err.message;
                         console.error(`❌ operatorBuy failed:`, err.message?.slice(0, 150));
                     }
+                } else {
+                    console.log(`⏭  BUY skipped — safe amount $${safeBuyAmount.toFixed(2)} < $3 minimum after gas buffer.`);
                 }
 
             } else if (decision.action === 'SELL' && pos) {
@@ -900,6 +944,7 @@ app.post('/api/smart-trade', async (req, res) => {
                         const pnlUSD = receivedUSDC - pos.entryUSDC;
                         const pnlSign = pnlUSD >= 0 ? '+' : '';
                         newBalance = positions.usdcBalance + receivedUSDC;
+                        usdcTraded = receivedUSDC;
 
                         delete agentPositions[agentId];
                         recordTrade(agentId, 'SELL');
@@ -926,6 +971,7 @@ app.post('/api/smart-trade', async (req, res) => {
                 txHash,
                 newBalance,
                 tokensTraded,
+                usdcTraded,
                 error: tradeError,
             }
         });
@@ -970,6 +1016,71 @@ app.get('/api/agent-balances/:userAddress/:agentId', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Diagnostics endpoint — check vault balance, DEX pool, positions for any agent
+ */
+app.get('/api/diagnose/:userAddress/:agentId', async (req, res) => {
+    try {
+        const { userAddress, agentId } = req.params;
+        const agentIdBytes32 = uuidToBytes32(agentId);
+
+        // On-chain vault USDC balance
+        const usdcBalanceRaw = await agentVaultContract.getUserAgentBalance(userAddress, agentIdBytes32);
+        const usdcBalance = parseFloat(ethers.formatUnits(usdcBalanceRaw, 6));
+
+        // On-chain token positions in vault
+        const btcPos = await agentVaultContract.getTokenPosition(userAddress, agentIdBytes32, CONTRACTS.TEST_BTC);
+        const ethPos = await agentVaultContract.getTokenPosition(userAddress, agentIdBytes32, CONTRACTS.TEST_ETH);
+        const solPos = await agentVaultContract.getTokenPosition(userAddress, agentIdBytes32, CONTRACTS.TEST_SOL);
+
+        // SimpleDEX pool liquidity
+        const btcPool = await simpleDexContract.getPoolBalance(CONTRACTS.TEST_BTC);
+        const ethPool = await simpleDexContract.getPoolBalance(CONTRACTS.TEST_ETH);
+        const solPool = await simpleDexContract.getPoolBalance(CONTRACTS.TEST_SOL);
+
+        // Trading wallet MATIC balance (for gas)
+        const maticBalRaw = await provider.getBalance(wallet.address);
+        const maticBalance = parseFloat(ethers.formatEther(maticBalRaw));
+
+        // Operator address on vault
+        const operatorAddr = await agentVaultContract.operator();
+
+        const inMemoryPos = agentPositions[agentId] || null;
+
+        res.json({
+            agentId,
+            userAddress,
+            agentIdBytes32,
+            vault: {
+                address: CONTRACTS.AGENT_VAULT_V2,
+                operator: operatorAddr,
+                walletIsOperator: operatorAddr.toLowerCase() === wallet.address.toLowerCase(),
+                usdcBalance,
+                tokenPositions: {
+                    tBTC: ethers.formatUnits(btcPos, 8),
+                    tETH: ethers.formatUnits(ethPos, 18),
+                    tSOL: ethers.formatUnits(solPos, 9),
+                }
+            },
+            dex: {
+                address: CONTRACTS.SIMPLE_DEX,
+                pools: {
+                    tBTC: ethers.formatUnits(btcPool, 8),
+                    tETH: ethers.formatUnits(ethPool, 18),
+                    tSOL: ethers.formatUnits(solPool, 9),
+                }
+            },
+            tradingWallet: {
+                address: wallet.address,
+                maticBalance,
+            },
+            inMemoryPosition: inMemoryPos,
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

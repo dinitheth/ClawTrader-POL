@@ -101,8 +101,8 @@ export const agentService = {
       return (await agentService.getById(id))!;
     }
 
-    // Use tagged template for safety
-    const rows = await sql(
+    // Use query for dynamic statements
+    const rows = await sql.query(
       `UPDATE agents SET ${setClauses.join(', ')}, updated_at = now() WHERE id = $${idx} RETURNING *`,
       [...values, id]
     );
@@ -219,7 +219,7 @@ export const matchService = {
 
     if (setClauses.length === 0) return updates as Match;
 
-    const rows = await sql(
+    const rows = await sql.query(
       `UPDATE matches SET ${setClauses.join(', ')}, updated_at = now() WHERE id = $${idx} RETURNING *`,
       [...values, id]
     );
@@ -300,7 +300,7 @@ export const profileService = {
 
     if (setClauses.length === 0) return updates as Profile;
 
-    const rows = await sql(
+    const rows = await sql.query(
       `UPDATE profiles SET ${setClauses.join(', ')}, updated_at = now() WHERE id = $${idx} RETURNING *`,
       [...values, id]
     );

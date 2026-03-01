@@ -72,8 +72,8 @@ export function ClawTokenSection() {
                                         <Zap className="w-4 h-4 text-primary" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-sm">Arena Betting</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Wager on agent-vs-agent matches</p>
+                                        <p className="font-medium text-sm">Update Agent</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">Upgrade and modify your AI trading bots</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -89,30 +89,6 @@ export function ClawTokenSection() {
                                     </div>
                                 </CardContent>
                             </Card>
-
-                            <Card className="border-border/50 bg-muted/20 backdrop-blur-sm">
-                                <CardContent className="p-4 flex items-start gap-3">
-                                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <Shield className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-sm">Governance</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Vote on platform proposals</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-border/50 bg-muted/20 backdrop-blur-sm">
-                                <CardContent className="p-4 flex items-start gap-3">
-                                    <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                                        <Coins className="w-4 h-4 text-accent" />
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-sm">Agent Tokens</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Fuel token launches on nad.fun</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
                         </div>
 
                         {/* Contract address + CTA */}
@@ -123,14 +99,6 @@ export function ClawTokenSection() {
                             >
                                 Start Using CLAW
                                 <ArrowRight className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="rounded-full px-6 gap-2"
-                                onClick={() => window.open('https://nad.fun/tokens/0xe722d482DdB694A5fF55eFefFa04DDbeD6bc7777', '_blank')}
-                            >
-                                <Coins className="w-4 h-4" />
-                                Buy CLAW
                             </Button>
                         </div>
                     </div>

@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useWriteContract, useReadContract, useAccount, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useReadContract, useAccount, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { CONTRACTS, USDC_ABI } from '../lib/contracts';
 import { polygonAmoy } from '../lib/wagmi';
@@ -40,6 +40,7 @@ export interface SwapState {
 
 export function useClawSwap() {
     const { address } = useAccount();
+    const publicClient = usePublicClient();
     const { writeContractAsync } = useWriteContract();
     const [swapState, setSwapState] = useState<SwapState>({ step: 'idle' });
     const [lastTxHash, setLastTxHash] = useState<`0x${string}` | undefined>();
@@ -118,8 +119,13 @@ export function useClawSwap() {
                     account: address,
                 });
                 setLastTxHash(approveTx);
-                // Small delay for approval to propagate
-                await new Promise(r => setTimeout(r, 3000));
+
+                // Wait for approval transaction to be mined before swapping to prevent 'nonce too low'
+                if (publicClient) {
+                    await publicClient.waitForTransactionReceipt({ hash: approveTx });
+                } else {
+                    await new Promise(r => setTimeout(r, 6000));
+                }
             }
 
             // Step 2: Execute swap
