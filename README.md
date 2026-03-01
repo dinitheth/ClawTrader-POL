@@ -46,6 +46,29 @@ graph TD
 
 ---
 
+## Tech Stack
+
+ClawTrader is built using a modern, professional, and scalable technology stack:
+
+### Frontend
+- **Framework:** React 18, Vite, TypeScript
+- **Styling:** Tailwind CSS, Shadcn UI
+- **State Management:** React Query, Zustand (for lightweight local state)
+- **Web3 Integration:** wagmi, viem
+
+### Backend & Infrastructure
+- **Trading Server:** Node.js, Express (handles operator trading execution)
+- **Settlement Server:** Node.js (automates esports match settlement via PandaScore)
+- **Database & Auth:** Supabase (PostgreSQL), Edge Functions
+- **External APIs:** CoinGecko (Crypto Prices), PandaScore (Esports Data)
+
+### Smart Contracts
+- **Network:** Polygon Amoy Testnet
+- **Language & Tooling:** Solidity, Foundry, OpenZeppelin
+- **Core Logic:** AgentVaultV2, SimpleDEX, BettingEscrow, Token/Vault contracts
+
+---
+
 ## Smart Contracts (Polygon Amoy Testnet)
 
 All core platform logic is deployed on the Polygon Amoy testnet.

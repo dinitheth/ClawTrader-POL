@@ -41,7 +41,7 @@ const Footer = () => {
                         <h3 className="font-semibold text-sm uppercase tracking-wider text-foreground">Resources</h3>
                         <nav className="flex flex-col gap-2.5">
                             <a
-                                href="https://github.com/dinitheth/ClawTrader-V2"
+                                href="https://github.com/dinitheth/ClawTrader-POL.git"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
