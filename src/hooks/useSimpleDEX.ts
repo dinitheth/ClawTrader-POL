@@ -49,8 +49,8 @@ export function useSimpleDEX() {
             args: [CONTRACTS.SIMPLE_DEX.address, amount],
             chain: polygonAmoy,
             account: userAddress,
-            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+            maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+            maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
         });
         setPendingTxHash(hash);
         return hash;
@@ -68,8 +68,8 @@ export function useSimpleDEX() {
             args: [CONTRACTS.SIMPLE_DEX.address, amount],
             chain: polygonAmoy,
             account: userAddress,
-            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+            maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+            maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
         });
         setPendingTxHash(hash);
         return hash;
@@ -103,8 +103,8 @@ export function useSimpleDEX() {
             args: [token.address, amountIn, minAmountOut],
             chain: polygonAmoy,
             account: userAddress,
-            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+            maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+            maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
         });
 
         setPendingTxHash(hash);
@@ -139,8 +139,8 @@ export function useSimpleDEX() {
             args: [token.address, amountIn, minAmountOut],
             chain: polygonAmoy,
             account: userAddress,
-            maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-            maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+            maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+            maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
         });
 
         setPendingTxHash(hash);

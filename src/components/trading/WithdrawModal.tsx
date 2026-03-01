@@ -12,9 +12,10 @@ import { Label } from '@/components/ui/label';
 import { ArrowDown, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
+import { polygonAmoy } from 'viem/chains';
 import { CONTRACTS, AGENT_VAULT_ABI, uuidToBytes32, parseUSDC, isContractConfigured } from '@/lib/contracts';
 import { useAgentVaultBalance } from '@/hooks/useAgentVaultBalance';
-import { polygonAmoy } from '@/lib/wagmi';
+import { polygonAmoy as wagmiPolygonAmoy } from '@/lib/wagmi';
 
 interface WithdrawModalProps {
   open: boolean;
@@ -89,7 +90,7 @@ export function WithdrawModal({ open, onOpenChange, agent, onWithdrawn }: Withdr
     if (withdrawAmount > onChainBalance) {
       toast({
         title: 'Insufficient Balance',
-        description: `Agent only has ${onChainBalance.toFixed(2)} USDC available on-chain`,
+        description: `Agent only has ${onChainBalance.toFixed(2)} USDC available on - chain`,
         variant: 'destructive',
       });
       return;
@@ -123,8 +124,10 @@ export function WithdrawModal({ open, onOpenChange, agent, onWithdrawn }: Withdr
         functionName: 'withdraw',
         args: [agentIdBytes32, amountWei],
         // Polygon Amoy requires minimum 30 Gwei priority fee
-        maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-        maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+        maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+        maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
+        chain: polygonAmoy,
+        account: address,
       });
     } catch (err) {
       console.error('Withdraw error:', err);

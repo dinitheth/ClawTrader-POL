@@ -117,6 +117,8 @@ export function useClawSwap() {
                     args: [CLAW_SWAP_ADDRESS, usdcWei],
                     chain: polygonAmoy,
                     account: address,
+                    maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+                    maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
                 });
                 setLastTxHash(approveTx);
 
@@ -137,6 +139,8 @@ export function useClawSwap() {
                 args: [usdcWei],
                 chain: polygonAmoy,
                 account: address,
+                maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+                maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
             });
             setLastTxHash(swapTx);
             setSwapState({ step: 'success', txHash: swapTx });

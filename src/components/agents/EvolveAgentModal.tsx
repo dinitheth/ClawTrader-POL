@@ -13,6 +13,7 @@ import { Dna, Sparkles, Loader2, ArrowRight, Zap, Brain } from 'lucide-react';
 import { agentService, evolutionService } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
+import { polygonAmoy } from 'viem/chains';
 import { CONTRACTS, AGENT_FACTORY_ABI, uuidToBytes32 } from '@/lib/contracts';
 
 interface Agent {
@@ -88,8 +89,10 @@ export function EvolveAgentModal({ open, onOpenChange, agent, onSuccess }: Evolv
       ],
       // Polygon Amoy requires explicit gas to avoid estimation issues
       gas: BigInt(300_000),                              // 300k gas limit
-      maxPriorityFeePerGas: BigInt(30_000_000_000),     // 30 gwei
-      maxFeePerGas: BigInt(60_000_000_000),              // 60 gwei
+      maxPriorityFeePerGas: BigInt(40_000_000_000),     // 40 gwei
+      maxFeePerGas: BigInt(80_000_000_000),              // 80 gwei
+      account: address,
+      chain: polygonAmoy,
     });
     setTxStep('confirming');
     if (publicClient) {

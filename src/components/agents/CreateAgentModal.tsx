@@ -130,9 +130,9 @@ const CreateAgentModal = ({ isOpen, onClose, profileId, onAgentCreated }: Create
           BigInt(DEFAULT_DNA.timingSensitivity),
           BigInt(DEFAULT_DNA.contrarianBias),
         ],
-        // Polygon Amoy requires minimum 30 gwei priority fee
-        maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 gwei
-        maxFeePerGas: BigInt(60_000_000_000),          // 60 gwei
+        // Polygon Amoy requires minimum 30 gwei priority fee, increasing to 40/80 for safety
+        maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 gwei
+        maxFeePerGas: BigInt(80_000_000_000),          // 80 gwei
       });
 
       setTxStep('confirming');

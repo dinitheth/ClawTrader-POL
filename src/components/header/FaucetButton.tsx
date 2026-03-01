@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Droplets, Loader2, CheckCircle, Clock } from 'lucide-react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { polygonAmoy } from 'viem/chains';
 import { useToast } from '@/hooks/use-toast';
 import { CONTRACTS, isContractConfigured } from '@/lib/contracts';
 import {
@@ -228,8 +229,10 @@ export function FaucetButton() {
       address: CONTRACTS.USDC.address,
       abi: FAUCET_ABI,
       functionName: 'faucet',
-      maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-      maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+      maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+      maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
+      chain: polygonAmoy,
+      account: address,
     });
   };
 

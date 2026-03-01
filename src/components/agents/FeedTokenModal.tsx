@@ -211,10 +211,10 @@ export function FeedTokenModal({ open, onOpenChange, agent, onSuccess }: FeedTok
                 functionName: 'transfer',
                 args: [BURN_ADDRESS, burnAmount],
                 chainId: POLYGON_AMOY_CHAIN_ID,
-                // Polygon Amoy requires minimum 30 Gwei priority fee
+                // Polygon Amoy requires minimum 30 Gwei priority fee, bumped to 40/80
                 gas: BigInt(150_000),
-                maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-                maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+                maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+                maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
             });
 
             setTxStep('confirming');
@@ -240,10 +240,10 @@ export function FeedTokenModal({ open, onOpenChange, agent, onSuccess }: FeedTok
                     BigInt(Math.round(newDNA.dna_contrarian_bias * 100)),
                 ],
                 chainId: POLYGON_AMOY_CHAIN_ID,
-                // Polygon Amoy requires minimum 30 Gwei priority fee
+                // Polygon Amoy requires minimum 30 Gwei priority fee, bumped to 40/80
                 gas: BigInt(300_000),
-                maxPriorityFeePerGas: BigInt(30_000_000_000), // 30 Gwei
-                maxFeePerGas: BigInt(60_000_000_000),          // 60 Gwei
+                maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+                maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
             });
 
             if (publicClient) {

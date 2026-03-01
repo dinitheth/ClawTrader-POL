@@ -8,7 +8,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { useToast } from '@/hooks/use-toast';
 import { CONTRACTS, USDC_ABI, AGENT_VAULT_ABI, uuidToBytes32, formatUSDC, parseUSDC, isContractConfigured } from '@/lib/contracts';
 import { useAgentVaultBalance } from '@/hooks/useAgentVaultBalance';
-import { polygonAmoy } from '@/lib/wagmi';
+import { polygonAmoy } from 'viem/chains';
 
 interface FundAgentModalProps {
   open: boolean;
@@ -169,8 +169,10 @@ export function FundAgentModal({ open, onOpenChange, agent, onFunded }: FundAgen
           abi: USDC_ABI,
           functionName: 'approve',
           args: [CONTRACTS.AGENT_VAULT.address, amountWei],
-          maxPriorityFeePerGas: BigInt(30_000_000_000),
-          maxFeePerGas: BigInt(60_000_000_000),
+          maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+          maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
+          chain: polygonAmoy,
+          account: address,
         });
       } catch (err) {
         console.error('Approve error:', err);
@@ -197,8 +199,10 @@ export function FundAgentModal({ open, onOpenChange, agent, onFunded }: FundAgen
         abi: AGENT_VAULT_ABI,
         functionName: 'deposit',
         args: [agentIdBytes32, amountWei],
-        maxPriorityFeePerGas: BigInt(30_000_000_000),
-        maxFeePerGas: BigInt(60_000_000_000),
+        maxPriorityFeePerGas: BigInt(40_000_000_000), // 40 Gwei
+        maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
+        chain: polygonAmoy,
+        account: address,
       });
     } catch (err) {
       console.error('Deposit error:', err);
