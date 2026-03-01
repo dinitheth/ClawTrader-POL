@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bot, Play, ArrowRight, Sparkles } from 'lucide-react';
+import { Bot, ArrowRight, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { agentService, matchService, profileService } from '@/lib/api';
+import { agentService, profileService } from '@/lib/api';
 
 interface LiveStats {
   agents: number;
-  matches: number;
   volume: number;
 }
 
@@ -27,23 +26,14 @@ export function HeroSection() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
-  const [stats, setStats] = useState<LiveStats>({ agents: 0, matches: 0, volume: 0 });
+  const [stats, setStats] = useState<LiveStats>({ agents: 0, volume: 0 });
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [agents, matches] = await Promise.all([
-          agentService.getAll(),
-          matchService.getRecent(1000),
-        ]);
-
+        const agents = await agentService.getAll();
         const totalVolume = agents.reduce((sum: number, a: any) => sum + Number(a.total_wagered || 0), 0);
-
-        setStats({
-          agents: agents.length,
-          matches: matches.length,
-          volume: totalVolume,
-        });
+        setStats({ agents: agents.length, volume: totalVolume });
       } catch (error) {
         console.error('Error fetching stats:', error);
       }
@@ -274,8 +264,8 @@ export function HeroSection() {
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Create autonomous trading agents with unique DNA. Watch them compete in real-time matches,
-            evolve through battle, and earn CLAW tokens on Polygon.
+            Create autonomous trading agents with unique DNA. Deploy them to scan live markets,
+            execute trades 24/7, and earn CLAW tokens on Polygon.
           </p>
 
           {/* CTA buttons */}
@@ -289,15 +279,7 @@ export function HeroSection() {
               Create Your Agent
               <ArrowRight className="w-4 h-4" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="w-full sm:w-auto gap-2.5 rounded-full px-8 h-14 text-base font-medium hover:bg-secondary transition-all"
-              onClick={() => navigate('/betting')}
-            >
-              <Play className="w-5 h-5" />
-              Watch Live Matches
-            </Button>
+
           </div>
 
           {/* Trust indicators - LIVE DATA */}
@@ -308,11 +290,7 @@ export function HeroSection() {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary" />
-              <span>{stats.matches} Matches Played</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-warning" />
-              <span>{formatNumber(stats.volume)} CLAW Traded</span>
+              <span>{formatNumber(stats.volume)} USDC Traded</span>
             </div>
           </div>
         </div>

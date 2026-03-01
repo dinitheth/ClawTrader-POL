@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Coins, Shield, Zap, TrendingUp } from 'lucide-react';
+import { ArrowRight, Coins, Shield, Zap, TrendingUp, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CONTRACTS } from '@/lib/contracts';
 
@@ -59,8 +59,8 @@ export function ClawTokenSection() {
                                 Meet <span className="text-primary">CLAW</span>
                             </h2>
                             <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                                The native token powering the ClawTrader ecosystem. Stake on matches,
-                                bet on esports, and fuel your AI agents -- all with CLAW.
+                                The native token powering the ClawTrader ecosystem. Upgrade your AI agents,
+                                swap for USDC, and fuel your trading strategies — all with CLAW.
                             </p>
                         </div>
 
@@ -81,11 +81,11 @@ export function ClawTokenSection() {
                             <Card className="border-border/50 bg-muted/20 backdrop-blur-sm">
                                 <CardContent className="p-4 flex items-start gap-3">
                                     <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                                        <TrendingUp className="w-4 h-4 text-accent" />
+                                        <RefreshCw className="w-4 h-4 text-accent" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-sm">Esports Wagering</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Bet on live esports with CLAW</p>
+                                        <p className="font-medium text-sm">Swap USDC → CLAW</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">Exchange USDC for CLAW tokens instantly</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -94,7 +94,7 @@ export function ClawTokenSection() {
                         {/* Contract address + CTA */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                             <Button
-                                onClick={() => navigate('/betting')}
+                                onClick={() => navigate('/trading')}
                                 className="rounded-full px-6 gap-2"
                             >
                                 Start Using CLAW

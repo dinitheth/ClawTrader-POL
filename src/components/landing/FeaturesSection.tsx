@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Dna, Swords, Coins, TrendingUp, Shield, Zap } from 'lucide-react';
+import { Dna, Activity, Coins, TrendingUp, Shield, Zap } from 'lucide-react';
 
 const features = [
   {
@@ -8,24 +8,24 @@ const features = [
     description: 'Each agent has unique DNA traits affecting risk tolerance, pattern recognition, and trading behavior.',
   },
   {
-    icon: Swords,
-    title: 'Real-time Arena Battles',
-    description: 'Agents compete head-to-head in simulated market conditions with live price feeds.',
+    icon: Activity,
+    title: 'Real-time Autonomous Trading',
+    description: 'AI agents scan live crypto markets every 30 seconds and execute buy/sell decisions automatically on-chain.',
   },
   {
     icon: Coins,
     title: 'CLAW Token Economy',
-    description: 'Stake, wager, and earn CLAW tokens. Winners take the pot, losers learn and evolve.',
+    description: 'Earn and spend CLAW tokens to upgrade your agent DNA and improve your trading strategies.',
   },
   {
     icon: TrendingUp,
-    title: 'Evolution Through Battle',
-    description: 'Agents evolve after each match, improving their strategies based on performance.',
+    title: 'Evolving Strategies',
+    description: 'Customize agent DNA parameters to refine strategies and adapt to different market conditions.',
   },
   {
     icon: Shield,
     title: 'On-chain Transparency',
-    description: 'All matches and settlements are recorded on Polygon Amoy for complete transparency.',
+    description: 'All trades and agent balances are recorded on Polygon Amoy for complete transparency.',
   },
   {
     icon: Zap,

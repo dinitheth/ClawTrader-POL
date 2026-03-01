@@ -36,16 +36,17 @@ export interface OnChainAgentData {
  * directly from the AgentVault contract using getAgentTotalBalance(bytes32).
  */
 export async function fetchOnChainLeaderboard(): Promise<OnChainAgentData[]> {
-    // Step 1: Get all agents from Neon
+    // Step 1: Get all agents + their actual trade counts from trade_logs
     const agents = await sql`
-        SELECT id, name, avatar, generation, personality, created_at, total_matches, balance
-        FROM agents
-        ORDER BY created_at ASC
+        SELECT a.id, a.name, a.avatar, a.generation, a.personality, a.created_at, a.balance,
+               COUNT(t.id)::int AS trade_count
+        FROM agents a
+        LEFT JOIN trade_logs t ON t.agent_id = a.id
+        GROUP BY a.id, a.name, a.avatar, a.generation, a.personality, a.created_at, a.balance
+        ORDER BY a.created_at ASC
     `;
 
     if (!agents || agents.length === 0) return [];
-
-
 
     // Step 2: Batch-read on-chain balances for all agents
     const results: OnChainAgentData[] = await Promise.all(
@@ -66,7 +67,7 @@ export async function fetchOnChainLeaderboard(): Promise<OnChainAgentData[]> {
                 console.warn(`Failed to read vault balance for ${agent.name}:`, err);
             }
 
-            const totalTrades = agent.total_matches || 0;
+            const totalTrades = agent.trade_count || 0;
 
             // P&L: compare current vault balance to initial deposit
             const initialBalance = Number(agent.balance || 0);
