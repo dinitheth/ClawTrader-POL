@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { agentService, matchService, profileService } from '@/lib/api';
-import { Bot, Swords, TrendingUp, Users } from 'lucide-react';
+import { Bot, Swords, TrendingUp, Users, Activity, Wallet } from 'lucide-react';
 
 interface StatItemProps {
   label: string;
@@ -36,17 +36,17 @@ export function StatsSection() {
 
   const loadStats = async () => {
     try {
-      const [agents, matches, userCount] = await Promise.all([
+      const [agents, userCount] = await Promise.all([
         agentService.getAll(),
-        matchService.getRecent(100),
         profileService.getProfileCount(),
       ]);
 
-      const totalVolume = agents.reduce((sum: number, a: any) => sum + Number(a.total_wagered || 0), 0);
+      const totalTrades = agents.reduce((sum: number, a: any) => sum + Number(a.total_matches || 0), 0);
+      const totalVolume = agents.reduce((sum: number, a: any) => sum + Number(a.balance || 0), 0);
 
       setStats({
         agents: agents.length || 0,
-        matches: matches.length || 0,
+        matches: totalTrades,
         volume: totalVolume,
         users: userCount,
       });
@@ -78,15 +78,15 @@ export function StatsSection() {
             icon={<Bot className="w-6 h-6 text-primary" />}
           />
           <StatItem
-            label="Matches Played"
+            label="Total Trades"
             value={stats.matches.toString()}
-            icon={<Swords className="w-6 h-6 text-primary" />}
+            icon={<Activity className="w-6 h-6 text-primary" />}
           />
           <StatItem
-            label="Total Volume"
+            label="USDC Deposited"
             value={formatVolume(stats.volume)}
-            suffix="CLAW"
-            icon={<TrendingUp className="w-6 h-6 text-primary" />}
+            suffix="USDC"
+            icon={<Wallet className="w-6 h-6 text-primary" />}
           />
           <StatItem
             label="Traders"

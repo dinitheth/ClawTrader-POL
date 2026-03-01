@@ -32,8 +32,8 @@ export function HeroSection() {
     async function fetchStats() {
       try {
         const agents = await agentService.getAll();
-        const totalVolume = agents.reduce((sum: number, a: any) => sum + Number(a.total_wagered || 0), 0);
-        setStats({ agents: agents.length, volume: totalVolume });
+        const totalTrades = agents.reduce((sum: number, a: any) => sum + Number(a.total_matches || 0), 0);
+        setStats({ agents: agents.length, volume: totalTrades });
       } catch (error) {
         console.error('Error fetching stats:', error);
       }
@@ -290,7 +290,7 @@ export function HeroSection() {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary" />
-              <span>{formatNumber(stats.volume)} USDC Traded</span>
+              <span>{formatNumber(stats.volume)} Total Trades</span>
             </div>
           </div>
         </div>
