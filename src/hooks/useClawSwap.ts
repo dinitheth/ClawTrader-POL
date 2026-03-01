@@ -143,14 +143,20 @@ export function useClawSwap() {
                 maxFeePerGas: BigInt(80_000_000_000),          // 80 Gwei
             });
             setLastTxHash(swapTx);
+
+            // Wait for swap transaction to be mined
+            if (publicClient) {
+                await publicClient.waitForTransactionReceipt({ hash: swapTx });
+            } else {
+                await new Promise(r => setTimeout(r, 6000));
+            }
+
             setSwapState({ step: 'success', txHash: swapTx });
 
-            // Refresh balances
-            setTimeout(() => {
-                refetchUsdcBalance();
-                refetchClawBalance();
-                refetchAllowance();
-            }, 5000);
+            // Refresh balances now that it is explicitly mined
+            refetchUsdcBalance();
+            refetchClawBalance();
+            refetchAllowance();
 
             return swapTx;
         } catch (err: any) {
