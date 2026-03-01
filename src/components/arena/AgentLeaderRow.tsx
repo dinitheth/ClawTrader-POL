@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Wallet } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Activity, Trophy } from "lucide-react";
 
 interface AgentLeaderRowProps {
   rank: number;
@@ -8,6 +8,9 @@ interface AgentLeaderRowProps {
   generation: number;
   vaultBalance: number;
   totalTrades: number;
+  pnlPercent?: number;
+  sharpeScore?: number;
+  primaryMetric?: 'balance' | 'pnl' | 'sharpe' | 'trades';
 }
 
 const AgentLeaderRow = ({
@@ -17,6 +20,9 @@ const AgentLeaderRow = ({
   generation,
   vaultBalance,
   totalTrades,
+  pnlPercent = 0,
+  sharpeScore = 0,
+  primaryMetric = 'balance',
 }: AgentLeaderRowProps) => {
   const getRankStyle = () => {
     switch (rank) {
@@ -42,6 +48,59 @@ const AgentLeaderRow = ({
     return val.toFixed(2);
   };
 
+  // Render the large primary metric on the right
+  const renderPrimaryMetric = () => {
+    switch (primaryMetric) {
+      case 'pnl':
+        const pnlColor = pnlPercent >= 0 ? 'text-green-500' : 'text-red-500';
+        return (
+          <>
+            <p className="text-xs text-muted-foreground hidden sm:flex items-center gap-1 mb-0.5 justify-end">
+              {pnlPercent >= 0 ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />} ROI
+            </p>
+            <p className={`font-semibold text-sm tabular-nums ${pnlColor}`}>
+              {pnlPercent > 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+            </p>
+          </>
+        );
+      case 'sharpe':
+        return (
+          <>
+            <p className="text-xs text-muted-foreground hidden sm:flex items-center gap-1 mb-0.5 justify-end">
+              <Activity className="w-3 h-3" /> Score
+            </p>
+            <p className="font-semibold text-sm text-foreground tabular-nums">
+              {sharpeScore.toFixed(2)}
+            </p>
+          </>
+        );
+      case 'trades':
+        return (
+          <>
+            <p className="text-xs text-muted-foreground hidden sm:flex items-center gap-1 mb-0.5 justify-end">
+              <Trophy className="w-3 h-3" /> Trades
+            </p>
+            <p className="font-semibold text-sm text-foreground tabular-nums">
+              {totalTrades}
+            </p>
+          </>
+        );
+      case 'balance':
+      default:
+        return (
+          <>
+            <p className="text-xs text-muted-foreground hidden sm:flex items-center gap-1 mb-0.5 justify-end">
+              <Wallet className="w-3 h-3" /> Vault
+            </p>
+            <p className="font-semibold text-sm text-primary tabular-nums">
+              ${formatBalance(vaultBalance)}
+              <span className="text-xs text-muted-foreground ml-1 font-normal">USDC</span>
+            </p>
+          </>
+        );
+    }
+  };
+
   return (
     <div className={`flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl transition-colors hover:bg-muted/50 ${getRankStyle()}`}>
       {/* Rank */}
@@ -61,19 +120,16 @@ const AgentLeaderRow = ({
         </div>
         <div className="min-w-0">
           <p className="font-medium text-sm truncate">{name}</p>
-          <p className="text-xs text-muted-foreground">{totalTrades} trades</p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {primaryMetric !== 'balance' && <span>${formatBalance(vaultBalance)} USDC</span>}
+            {primaryMetric === 'balance' && <span>{totalTrades} trades</span>}
+          </div>
         </div>
       </div>
 
-      {/* Vault Balance */}
+      {/* Right side variable metric */}
       <div className="text-right flex-shrink-0">
-        <p className="text-xs text-muted-foreground hidden sm:flex items-center gap-1 mb-0.5 justify-end">
-          <Wallet className="w-3 h-3" /> Vault
-        </p>
-        <p className="font-semibold text-sm text-primary tabular-nums">
-          ${formatBalance(vaultBalance)}
-          <span className="text-xs text-muted-foreground ml-1 font-normal">USDC</span>
-        </p>
+        {renderPrimaryMetric()}
       </div>
     </div>
   );

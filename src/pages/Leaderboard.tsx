@@ -4,7 +4,7 @@ import AgentLeaderRow from "@/components/arena/AgentLeaderRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Wallet, Loader2, RefreshCw } from "lucide-react";
+import { Trophy, Wallet, Loader2, RefreshCw, TrendingUp, Activity } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { fetchOnChainLeaderboard, type OnChainAgentData } from '@/lib/onchain-leaderboard';
 
@@ -31,17 +31,22 @@ const Leaderboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const formatAgentForRow = (agent: OnChainAgentData, index: number) => ({
+  const formatAgentForRow = (agent: OnChainAgentData, index: number, primaryMetric: 'balance' | 'pnl' | 'sharpe' | 'trades' = 'balance') => ({
     rank: index + 1,
     name: agent.name,
     avatar: agent.avatar,
     generation: agent.generation,
     vaultBalance: agent.vaultBalanceUSDC,
     totalTrades: agent.totalTrades,
+    pnlPercent: agent.pnlPercent,
+    sharpeScore: agent.sharpeScore,
+    primaryMetric
   });
 
   // Sort modes
   const sortedByBalance = [...agents].sort((a, b) => b.vaultBalanceUSDC - a.vaultBalanceUSDC);
+  const sortedByPnl = [...agents].sort((a, b) => b.pnlPercent - a.pnlPercent);
+  const sortedBySharpe = [...agents].sort((a, b) => b.sharpeScore - a.sharpeScore);
   const sortedByTrades = [...agents].sort((a, b) => b.totalTrades - a.totalTrades);
 
   // Compute summary stats
@@ -100,15 +105,29 @@ const Leaderboard = () => {
         <Tabs defaultValue="by-balance" className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex-1" />
-            <TabsList className="bg-muted/50">
+            <TabsList className="bg-muted/50 hidden md:flex">
               <TabsTrigger value="by-balance" className="gap-2">
                 <Wallet className="w-4 h-4" />
                 By Vault
+              </TabsTrigger>
+              <TabsTrigger value="by-pnl" className="gap-2">
+                <TrendingUp className="w-4 h-4" />
+                By % PnL
+              </TabsTrigger>
+              <TabsTrigger value="by-sharpe" className="gap-2">
+                <Activity className="w-4 h-4" />
+                Sharpe Score
               </TabsTrigger>
               <TabsTrigger value="by-trades" className="gap-2">
                 <Trophy className="w-4 h-4" />
                 By Trades
               </TabsTrigger>
+            </TabsList>
+            {/* Mobile simplified tabs */}
+            <TabsList className="bg-muted/50 flex md:hidden">
+              <TabsTrigger value="by-balance" className="text-xs px-2"><Wallet className="w-3 h-3 mr-1" />Vault</TabsTrigger>
+              <TabsTrigger value="by-pnl" className="text-xs px-2"><TrendingUp className="w-3 h-3 mr-1" />PnL</TabsTrigger>
+              <TabsTrigger value="by-sharpe" className="text-xs px-2"><Activity className="w-3 h-3 mr-1" />Sharpe</TabsTrigger>
             </TabsList>
             <div className="flex-1 flex justify-end">
               <Button
@@ -151,12 +170,47 @@ const Leaderboard = () => {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {sortedByBalance.map((agent, index) => (
-                      <AgentLeaderRow key={agent.id} {...formatAgentForRow(agent, index)} />
+                      <AgentLeaderRow key={agent.id} {...formatAgentForRow(agent, index, 'balance')} />
                     ))}
                   </CardContent>
                 </Card>
               </TabsContent>
 
+              <TabsContent value="by-pnl">
+                <Card className="card-glow border-border">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-display">Highest Returns (% PnL)</CardTitle>
+                      <Badge variant="outline" className="text-muted-foreground">
+                        % PnL
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {sortedByPnl.map((agent, index) => (
+                      <AgentLeaderRow key={agent.id} {...formatAgentForRow(agent, index, 'pnl')} />
+                    ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="by-sharpe">
+                <Card className="card-glow border-border">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-display">Risk-Adjusted Performance</CardTitle>
+                      <Badge variant="outline" className="text-muted-foreground">
+                        Sharpe Score
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {sortedBySharpe.map((agent, index) => (
+                      <AgentLeaderRow key={agent.id} {...formatAgentForRow(agent, index, 'sharpe')} />
+                    ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="by-trades">
                 <Card className="card-glow border-border">

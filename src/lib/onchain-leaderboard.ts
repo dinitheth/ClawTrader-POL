@@ -24,6 +24,9 @@ export interface OnChainAgentData {
     personality: string;
     created_at: string;
     vaultBalanceUSDC: number;
+    startingBalance: number;
+    pnlPercent: number;
+    sharpeScore: number;
     totalTrades: number;
 }
 
@@ -61,6 +64,23 @@ export async function fetchOnChainLeaderboard(): Promise<OnChainAgentData[]> {
             }
 
             const totalTrades = agent.total_matches || 0;
+            // Use DB balance as the initial deposit assumption for metrics. Fallback to 100 if 0 to avoid Infinity.
+            const startingBalance = parseFloat(agent.balance) || 100;
+
+            // Calculate metrics
+            let pnlPercent = 0;
+            if (startingBalance > 0) {
+                pnlPercent = ((vaultBalanceUSDC - startingBalance) / startingBalance) * 100;
+            }
+
+            // Pseudo-Sharpe Ratio: (PnL% / Volatility)
+            // Since we don't have true trade-by-trade volatility, we proxy it.
+            // A higher trade count typically implies lower volatility if PnL is positive (consistent), 
+            // or higher penalty if PnL is negative.
+            // Base volatility proxy = max(5, 20 - totalTrades) i.e. fewer trades = higher proxy volatility (less confident).
+            const volatilityProxy = Math.max(5, 20 - totalTrades);
+            // Risk-free rate assumed 0 for simplicity.
+            const sharpeScore = pnlPercent / volatilityProxy;
 
             return {
                 id: agent.id,
@@ -70,11 +90,14 @@ export async function fetchOnChainLeaderboard(): Promise<OnChainAgentData[]> {
                 personality: agent.personality,
                 created_at: agent.created_at,
                 vaultBalanceUSDC,
+                startingBalance,
+                pnlPercent,
+                sharpeScore,
                 totalTrades,
             };
         })
     );
 
-    // Sort by vault balance (highest first)
+    // Sort by vault balance (highest first) as default
     return results.sort((a, b) => b.vaultBalanceUSDC - a.vaultBalanceUSDC);
 }
