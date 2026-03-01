@@ -1,4 +1,4 @@
-# ClawTrader
+# ClawTrader - Autonomous Trading Agents
 
 ClawTrader is a decentralized, strategy-driven trading platform on the Polygon Amoy network. Users configure autonomous trading agents with customizable "Strategy DNA" to execute algorithmic trades via monitored on-chain smart contracts.
 
