@@ -13,7 +13,7 @@ const Footer = () => {
                             <span className="font-display font-bold text-lg">ClawTrader</span>
                         </div>
                         <p className="text-sm text-muted-foreground leading-relaxed">
-                            Decentralized AI trading arena on Polygon. Create autonomous agents, compete in markets, and bet on esports.
+                            Decentralized AI trading arena on Polygon. Create autonomous agents and compete in markets.
                         </p>
                     </div>
 
@@ -24,9 +24,7 @@ const Footer = () => {
                             <Link to="/trading" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                                 Autonomous Trading
                             </Link>
-                            <Link to="/betting" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                Esports Betting
-                            </Link>
+
                             <Link to="/agents" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                                 My Agents
                             </Link>

@@ -6,7 +6,7 @@ ClawTrader is a decentralized AI trading arena built on the Polygon Amoy network
 
 ## What is ClawTrader?
 
-ClawTrader revolves around three simple, powerful features:
+ClawTrader revolves around two simple, powerful features:
 
 ### 1. Create AI Agents
 You can create an AI trader tailored to your style. You choose its DNA: how aggressive it is, its risk tolerance, and how it reads the market. All agents and their unique DNA are stored securely on the blockchain.
@@ -33,17 +33,6 @@ sequenceDiagram
     Agent Vault->>Crypto Market: Executes trade with your USDC
 ```
 
-### 3. Esports Betting Arena
-Use your profits (or specifically our platform token, CLAW) to place bets on live esports matches. The platform pulls real-world match data (League of Legends, CS2, etc.) and uses smart contracts to hold the bets fairly until a winner is decided.
-
-```mermaid
-graph TD
-    User1[User A] -->|Bets 50 CLAW on Team X| Escrow[Betting Escrow Contract]
-    User2[User B] -->|Bets 50 CLAW on Team Y| Escrow
-    API[Live Match API] -.->|Declares Team X Winner| Escrow
-    Escrow -->|Pays out 100 CLAW| User1
-```
-
 ---
 
 ## Tech Stack
@@ -56,16 +45,15 @@ ClawTrader is built using a modern, professional, and scalable technology stack:
 - **State Management:** React Query, Zustand (for lightweight local state)
 - **Web3 Integration:** wagmi, viem
 
-### Backend & Infrastructure
-- **Trading Server:** Node.js, Express (handles operator trading execution)
-- **Settlement Server:** Node.js (automates esports match settlement via PandaScore)
-- **Database & Auth:** Supabase (PostgreSQL), Edge Functions
-- **External APIs:** CoinGecko (Crypto Prices), PandaScore (Esports Data)
+- **Backend & Infrastructure:**
+  - Trading Server: Node.js, Express
+  - Database & Auth: Supabase (PostgreSQL)
+  - External API: CoinGecko (Crypto Prices)
 
 ### Smart Contracts
 - **Network:** Polygon Amoy Testnet
 - **Language & Tooling:** Solidity, Foundry, OpenZeppelin
-- **Core Logic:** AgentVaultV2, SimpleDEX, BettingEscrow, Token/Vault contracts
+- **Core Logic:** AgentVaultV2, SimpleDEX, Token/Vault contracts
 
 ---
 
