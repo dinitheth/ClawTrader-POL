@@ -11,7 +11,7 @@ import { CONTRACTS, USDC_ABI } from '../lib/contracts';
 import { polygonAmoy } from '../lib/wagmi';
 
 // ClawSwap contract address — UPDATE after deployment
-export const CLAW_SWAP_ADDRESS = '0xd9362A0d7420ff8cDb6Cb93a23B224B4e95671c5' as `0x${string}`;
+export const CLAW_SWAP_ADDRESS = '0xc4370E1f7BD49B37F75495020e820c2bdDC46FED' as `0x${string}`;
 
 const CLAW_TOKEN_ADDRESS = CONTRACTS.CLAW_TOKEN.address;
 const USDC_ADDRESS = CONTRACTS.USDC.address;
