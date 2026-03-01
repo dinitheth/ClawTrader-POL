@@ -81,7 +81,9 @@ const Leaderboard = () => {
           <Card className="border-border/50 bg-muted/20">
             <CardContent className="p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">Total Trades</p>
-              <p className="text-2xl font-bold">{totalTrades}</p>
+              <p className={`font-bold ${totalTrades > 0 ? "text-2xl" : "text-sm text-muted-foreground"}`}>
+                {totalTrades > 0 ? totalTrades : "No trades executed yet (testnet)"}
+              </p>
             </CardContent>
           </Card>
           <Card className="border-border/50 bg-muted/20">

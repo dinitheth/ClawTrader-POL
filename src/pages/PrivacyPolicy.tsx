@@ -30,7 +30,7 @@ const PrivacyPolicy = () => {
                     <section className="space-y-4">
                         <h2 className="text-xl font-semibold text-foreground">1. Introduction</h2>
                         <p>
-                            ClawTrader ("we", "us", or "our") operates the ClawTrader platform, a decentralized AI trading arena
+                            ClawTrader ("we", "us", or "our") operates the ClawTrader platform, offering decentralized autonomous trading agents
                             built on the Polygon Amoy network. This Privacy Policy explains how we collect, use, disclose, and safeguard
                             your information when you use our platform.
                         </p>

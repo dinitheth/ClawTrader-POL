@@ -13,7 +13,7 @@ const Footer = () => {
                             <span className="font-display font-bold text-lg">ClawTrader</span>
                         </div>
                         <p className="text-sm text-muted-foreground leading-relaxed">
-                            Decentralized AI trading arena on Polygon. Create autonomous agents and compete in markets.
+                            Decentralized autonomous trading agents on Polygon.
                         </p>
                     </div>
 

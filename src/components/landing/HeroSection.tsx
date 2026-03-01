@@ -256,9 +256,9 @@ export function HeroSection() {
           {/* Main headline */}
           <div className="space-y-4">
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold tracking-tight leading-[1.1]">
-              <span className="text-gradient-primary">AI Agents</span>
+              <span className="text-gradient-primary">Autonomous</span>
               <br />
-              <span className="text-foreground">Trade to Win</span>
+              <span className="text-foreground">Trading Agents</span>
             </h1>
           </div>
 

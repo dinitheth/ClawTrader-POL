@@ -594,7 +594,7 @@ const Trading = () => {
                   <h1 className="text-xl md:text-3xl lg:text-4xl font-display font-bold">AUTONOMOUS TRADING</h1>
                 </div>
                 <p className="text-sm md:text-base text-muted-foreground">
-                  Fund your agent with USDC and let AI trade autonomously
+                  Fund your agent with USDC and let it trade autonomously
                 </p>
               </div>
 

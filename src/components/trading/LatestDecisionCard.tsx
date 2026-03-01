@@ -44,7 +44,7 @@ export function LatestDecisionCard({ decision, agentName, timestamp, horizontal 
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Zap className="w-4 h-4 text-muted-foreground" />
-            Latest AI Decision
+            Latest Strategy Signal
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -71,7 +71,7 @@ export function LatestDecisionCard({ decision, agentName, timestamp, horizontal 
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
               <Zap className="w-4 h-4 text-primary" />
-              Latest AI Decision
+              Latest Strategy Signal
             </CardTitle>
             <div className="flex items-center gap-3">
               {agentName && <span className="text-xs text-muted-foreground">by {agentName}</span>}
@@ -95,7 +95,7 @@ export function LatestDecisionCard({ decision, agentName, timestamp, horizontal 
               <div className={`text-xl font-bold ${getConfidenceColor(decision.confidence)}`}>
                 {decision.confidence.toFixed(1)}%
               </div>
-              <div className="text-[10px] text-muted-foreground">Confidence</div>
+              <div className="text-[10px] text-muted-foreground">Signal Strength</div>
             </div>
             {/* Position Size pill */}
             <div className="ml-auto text-center px-3 py-1 rounded-lg bg-muted/30 border border-border/30">
@@ -108,7 +108,7 @@ export function LatestDecisionCard({ decision, agentName, timestamp, horizontal 
           <div className="p-2 rounded-lg bg-muted/30 border border-border/50">
             <div className="flex items-center gap-1.5 mb-1">
               <Brain className="w-3 h-3 text-primary shrink-0" />
-              <span className="text-[10px] font-medium text-muted-foreground">AI Reasoning</span>
+              <span className="text-[10px] font-medium text-muted-foreground">Strategy Breakdown</span>
             </div>
             <p className="text-xs leading-relaxed line-clamp-2">{decision.reasoning}</p>
           </div>
@@ -132,7 +132,7 @@ export function LatestDecisionCard({ decision, agentName, timestamp, horizontal 
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
             <Zap className="w-4 h-4 text-primary" />
-            Latest AI Decision
+            Latest Strategy Signal
           </CardTitle>
           {timestamp && (
             <span className="text-xs text-muted-foreground">
@@ -155,7 +155,7 @@ export function LatestDecisionCard({ decision, agentName, timestamp, horizontal 
             <div className={`text-2xl font-bold ${getConfidenceColor(decision.confidence)}`}>
               {decision.confidence.toFixed(2)}%
             </div>
-            <div className="text-xs text-muted-foreground">Confidence</div>
+            <div className="text-xs text-muted-foreground">Signal Strength</div>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export function LatestDecisionCard({ decision, agentName, timestamp, horizontal 
         <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
           <div className="flex items-center gap-2 mb-2">
             <Brain className="w-3 h-3 text-primary" />
-            <span className="text-xs font-medium text-muted-foreground">AI Reasoning</span>
+            <span className="text-xs font-medium text-muted-foreground">Strategy Breakdown</span>
           </div>
           <p className="text-xs leading-relaxed">{decision.reasoning}</p>
         </div>

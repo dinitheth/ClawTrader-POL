@@ -1,54 +1,54 @@
 # ClawTrader
 
-ClawTrader is a decentralized AI trading arena built on the Polygon Amoy network. Users create autonomous trading agents with customizable "Strategy DNA", compete in markets, and trade cryptocurrencies through AI-driven decisions powered by on-chain smart contracts.
+ClawTrader is a decentralized, strategy-driven trading platform on the Polygon Amoy network. Users configure autonomous trading agents with customizable "Strategy DNA" to execute algorithmic trades via monitored on-chain smart contracts.
 
 ---
 
 ## What is ClawTrader?
 
-ClawTrader revolves around two simple, powerful features:
+ClawTrader revolves around two core features:
 
-### 1. Create AI Agents
-You can create an AI trader tailored to your style. You choose its DNA: how aggressive it is, its risk tolerance, and how it reads the market. All agents and their unique DNA are stored securely on the blockchain.
+### 1. Configure Trading Agents
+You can create an algorithmic trader tailored to your style. You adjust its parameters: risk tolerance, aggressiveness, and how it reacts to technical indicators. All agents and their unique configurations are registered securely on the blockchain.
 
 ```mermaid
 graph LR
-    User([User]) -->|Designs DNA & Personality| Factory[AgentFactory Contract]
-    Factory -->|Mints DNA on-chain| Agent((AI Agent))
+    User([User]) -->|Configures Parameters| Factory[AgentFactory Contract]
+    Factory -->|Registers DNA on-chain| Agent((Trading Agent))
     Agent -->|Ready to Trade!| Market
 ```
 
 ### 2. Autonomous Trading
-Once your agent is created, you fund its personal smart contract vault with USDC. Then, the AI takes over! It scans the market every 30 seconds, decides whether to Buy, Sell, or Hold, and executes trades on a decentralized exchange entirely on its own.
+Once your agent is created, you fund its personal smart contract vault with USDC. Then, the automated system takes over. It evaluates technical indicators every 30 seconds, decides whether to Buy, Sell, or Hold based on the agent's strategy, and executes trades on a decentralized exchange.
 
 ```mermaid
 sequenceDiagram
     participant Agent Vault
-    participant Trading AI
+    participant Trading Server
     participant Crypto Market
     
-    Trading AI->>Crypto Market: Scans prices every 30s
-    Trading AI-->>Trading AI: Thinks: "Good time to buy BTC?"
-    Trading AI->>Agent Vault: "Yes, BUY!"
-    Agent Vault->>Crypto Market: Executes trade with your USDC
+    Trading Server->>Crypto Market: Scans indicators every 30s
+    Trading Server-->>Trading Server: Evaluates agent parameters
+    Trading Server->>Agent Vault: Operator triggers execution
+    Agent Vault->>Crypto Market: Executes trade with user's USDC
 ```
 
 ---
 
 ## Tech Stack
 
-ClawTrader is built using a modern, professional, and scalable technology stack:
+ClawTrader is built using a modern, scalable technology stack:
 
 ### Frontend
 - **Framework:** React 18, Vite, TypeScript
 - **Styling:** Tailwind CSS, Shadcn UI
-- **State Management:** React Query, Zustand (for lightweight local state)
+- **State Management:** React Query, Zustand
 - **Web3 Integration:** wagmi, viem
 
-- **Backend & Infrastructure:**
-  - Trading Server: Node.js, Express
-  - Database & Auth: Supabase (PostgreSQL)
-  - External API: CoinGecko (Crypto Prices)
+### Backend & Infrastructure
+- **Trading Server:** Node.js, Express
+- **Database & Auth:** Supabase (PostgreSQL)
+- **External API:** CoinGecko (Crypto Prices)
 
 ### Smart Contracts
 - **Network:** Polygon Amoy Testnet
@@ -59,7 +59,7 @@ ClawTrader is built using a modern, professional, and scalable technology stack:
 
 ## Smart Contracts (Polygon Amoy Testnet)
 
-All core platform logic is deployed on the Polygon Amoy testnet.
+All core platform operations are secured on the Polygon Amoy testnet. The operator wallet pays execution gas, while the smart contracts enforce strict limits on fund access and trade validation.
 
 | Contract | Address | Purpose |
 |---|---|---|
@@ -90,7 +90,7 @@ All core platform logic is deployed on the Polygon Amoy testnet.
    ```
 
 ### Backend (Trading Server)
-The trading server is responsible for making the AI decisions and holding the operator wallet to execute trades on AgentVaultV2.
+The trading server evaluates strategy algorithms and pushes verified Operator-executed commands. The server's operator wallet covers transaction gas fees so users don't need MATIC, while the smart contracts strictly protect user deposits.
 1. Ensure the `TRADING_WALLET_PRIVATE_KEY` is set in your `.env`.
 2. Start the trading server:
    ```bash
