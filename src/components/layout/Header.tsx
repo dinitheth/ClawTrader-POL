@@ -33,7 +33,7 @@ const Header = () => {
                   ClawTrader
                 </span>
                 <span className="text-[9px] md:text-[10px] text-muted-foreground -mt-0.5 hidden sm:block">
-                  AI Trading Arena
+                  Autonomous Trading
                 </span>
               </div>
             </NavLink>
