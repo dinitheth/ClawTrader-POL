@@ -1,14 +1,13 @@
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 
 interface AgentLeaderRowProps {
   rank: number;
   name: string;
   avatar: string;
   generation: number;
-  vaultBalance: number;       // USDC vault balance
-  totalTrades: number;         // number of trades
-  pnlPercent: number;          // P&L percentage
+  vaultBalance: number;
+  totalTrades: number;
 }
 
 const AgentLeaderRow = ({
@@ -18,31 +17,22 @@ const AgentLeaderRow = ({
   generation,
   vaultBalance,
   totalTrades,
-  pnlPercent
 }: AgentLeaderRowProps) => {
   const getRankStyle = () => {
     switch (rank) {
-      case 1:
-        return 'bg-primary/5';
-      case 2:
-        return 'bg-muted/50';
-      case 3:
-        return 'bg-muted/30';
-      default:
-        return 'bg-transparent';
+      case 1: return 'bg-primary/5';
+      case 2: return 'bg-muted/50';
+      case 3: return 'bg-muted/30';
+      default: return 'bg-transparent';
     }
   };
 
   const getRankColor = () => {
     switch (rank) {
-      case 1:
-        return 'text-primary font-bold';
-      case 2:
-        return 'text-foreground font-semibold';
-      case 3:
-        return 'text-foreground font-semibold';
-      default:
-        return 'text-muted-foreground font-medium';
+      case 1: return 'text-primary font-bold';
+      case 2: return 'text-foreground font-semibold';
+      case 3: return 'text-foreground font-semibold';
+      default: return 'text-muted-foreground font-medium';
     }
   };
 
@@ -56,9 +46,7 @@ const AgentLeaderRow = ({
     <div className={`flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl transition-colors hover:bg-muted/50 ${getRankStyle()}`}>
       {/* Rank */}
       <div className="w-8 text-center flex-shrink-0">
-        <span className={`text-sm md:text-base ${getRankColor()}`}>
-          {rank}
-        </span>
+        <span className={`text-sm md:text-base ${getRankColor()}`}>{rank}</span>
       </div>
 
       {/* Agent Info */}
@@ -74,19 +62,6 @@ const AgentLeaderRow = ({
         <div className="min-w-0">
           <p className="font-medium text-sm truncate">{name}</p>
           <p className="text-xs text-muted-foreground">{totalTrades} trades</p>
-        </div>
-      </div>
-
-      {/* Stats - Desktop only */}
-      <div className="hidden sm:flex items-center gap-6">
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground mb-0.5">P&L</p>
-          <div className={`flex items-center justify-center gap-1 ${pnlPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            {pnlPercent >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-            <span className="font-medium text-sm tabular-nums">
-              {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
-            </span>
-          </div>
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import AgentLeaderRow from "@/components/arena/AgentLeaderRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp, Wallet, Loader2, RefreshCw } from "lucide-react";
+import { Trophy, Wallet, Loader2, RefreshCw } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { fetchOnChainLeaderboard, type OnChainAgentData } from '@/lib/onchain-leaderboard';
 
@@ -38,12 +38,10 @@ const Leaderboard = () => {
     generation: agent.generation,
     vaultBalance: agent.vaultBalanceUSDC,
     totalTrades: agent.totalTrades,
-    pnlPercent: agent.pnlPercent,
   });
 
-  // Different sort modes
+  // Sort modes
   const sortedByBalance = [...agents].sort((a, b) => b.vaultBalanceUSDC - a.vaultBalanceUSDC);
-  const sortedByPnL = [...agents].sort((a, b) => b.pnlPercent - a.pnlPercent);
   const sortedByTrades = [...agents].sort((a, b) => b.totalTrades - a.totalTrades);
 
   // Compute summary stats
@@ -107,10 +105,6 @@ const Leaderboard = () => {
                 <Wallet className="w-4 h-4" />
                 By Vault
               </TabsTrigger>
-              <TabsTrigger value="by-pnl" className="gap-2">
-                <TrendingUp className="w-4 h-4" />
-                By P&L
-              </TabsTrigger>
               <TabsTrigger value="by-trades" className="gap-2">
                 <Trophy className="w-4 h-4" />
                 By Trades
@@ -163,23 +157,6 @@ const Leaderboard = () => {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="by-pnl">
-                <Card className="card-glow border-border">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-display">Ranked by P&L</CardTitle>
-                      <Badge variant="outline" className="text-muted-foreground">
-                        Trading Returns
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {sortedByPnL.map((agent, index) => (
-                      <AgentLeaderRow key={agent.id} {...formatAgentForRow(agent, index)} />
-                    ))}
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
               <TabsContent value="by-trades">
                 <Card className="card-glow border-border">

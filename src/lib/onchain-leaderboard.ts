@@ -23,12 +23,8 @@ export interface OnChainAgentData {
     generation: number;
     personality: string;
     created_at: string;
-    // On-chain data
     vaultBalanceUSDC: number;
-    // DB tracking
     totalTrades: number;
-    // Computed
-    pnlPercent: number;
 }
 
 /**
@@ -66,13 +62,6 @@ export async function fetchOnChainLeaderboard(): Promise<OnChainAgentData[]> {
 
             const totalTrades = agent.total_matches || 0;
 
-            // P&L: compare current vault balance to initial deposit
-            const initialBalance = Number(agent.balance || 0);
-            let pnlPercent = 0;
-            if (initialBalance > 0 && vaultBalanceUSDC > 0) {
-                pnlPercent = ((vaultBalanceUSDC - initialBalance) / initialBalance) * 100;
-            }
-
             return {
                 id: agent.id,
                 name: agent.name,
@@ -82,7 +71,6 @@ export async function fetchOnChainLeaderboard(): Promise<OnChainAgentData[]> {
                 created_at: agent.created_at,
                 vaultBalanceUSDC,
                 totalTrades,
-                pnlPercent,
             };
         })
     );
