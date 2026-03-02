@@ -27,6 +27,8 @@ If an execution condition is met, a restricted operator wallet submits the trade
 
 At no point does the trading server custody user funds. All assets remain locked inside user-owned smart contract vaults, and execution is strictly limited by on-chain rules.
 
+All tradings are performed using USDC as the base currency. tBTC,tETH,tSOL are traded as an intermediate asset, but profits are always realized and withdrawable in USDC.
+
 ```mermaid
 sequenceDiagram
     participant Agent Vault
