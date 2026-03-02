@@ -1,4 +1,4 @@
-# ClawTrader - Autonomous Trading Agents
+# ClawTrader – Autonomous Trading Agents on Polygon
 
 ClawTrader is a decentralized, strategy-driven trading platform on the Polygon Amoy network. Users configure autonomous trading agents with customizable "Strategy DNA" to execute algorithmic trades via monitored on-chain smart contracts.
 
@@ -18,8 +18,14 @@ graph LR
     Agent -->|Ready to Trade!| Market
 ```
 
-### 2. Autonomous Trading
-Once your agent is created, you fund its personal smart contract vault with USDC. Then, the automated system takes over. It evaluates technical indicators every 30 seconds, decides whether to Buy, Sell, or Hold based on the agent's strategy, and executes trades on a decentralized exchange.
+### 2. Autonomous Strategy Execution
+Once an agent is created, the user funds its dedicated smart contract vault with USDC. From that point onward, strategy execution is automated.
+
+An off-chain trading server periodically evaluates market data and technical indicators (every 30 seconds) against the agent’s predefined strategy parameters. Based on this evaluation, the server determines whether a Buy, Sell, or Hold action is permitted.
+
+If an execution condition is met, a restricted operator wallet submits the trade transaction to the agent’s on-chain vault. The smart contract validates the request and executes the trade on a decentralized exchange using the vault’s funds.
+
+At no point does the trading server custody user funds. All assets remain locked inside user-owned smart contract vaults, and execution is strictly limited by on-chain rules.
 
 ```mermaid
 sequenceDiagram
@@ -57,10 +63,12 @@ ClawTrader is built using a modern, scalable technology stack:
 - **State Management:** React Query, Zustand
 - **Web3 Integration:** wagmi, viem
 
-### Backend & Infrastructure
-- **Trading Server:** Node.js, Express
-- **Database & Auth:** Supabase (PostgreSQL)
-- **External API:** CoinGecko (Crypto Prices)
+Backend & Infrastructure
+- Trading Server: Node.js, Express
+- Database: Neon (Serverless PostgreSQL)
+- Database Access: Supabase (Auth & edge access)
+- Blockchain Data: Etherscan / Polygonscan API
+- External Market Data: CoinGecko (Crypto Prices)
 
 ### Smart Contracts
 - **Network:** Polygon Amoy Testnet
@@ -90,6 +98,13 @@ All core platform operations are secured on the Polygon Amoy testnet. The operat
 - Node.js version 18 or higher
 - Git
 
+The following environment variables are required:
+
+- TRADING_WALLET_PRIVATE_KEY
+- DATABASE_URL (Neon PostgreSQL connection string)
+- ETHERSCAN_API_KEY
+
+
 ### Frontend Setup
 1. Clone the repository and install dependencies:
    ```bash
@@ -101,14 +116,33 @@ All core platform operations are secured on the Polygon Amoy testnet. The operat
    npm run dev
    ```
 
-### Backend (Trading Server)
-The trading server evaluates strategy algorithms and pushes verified Operator-executed commands. The server's operator wallet covers transaction gas fees so users don't need MATIC, while the smart contracts strictly protect user deposits.
+## Trading Server Overview
+
+The trading server is responsible for evaluating predefined strategy rules and technical indicators off-chain and submitting execution transactions to smart contracts.
+
+It does **not** custody user funds. All assets remain locked inside user-owned on-chain vaults.  
+The server operates through a restricted operator wallet that can only execute approved actions validated by the agent vault contracts.
+
+The trading server:
+- Evaluates strategy rules at fixed intervals
+- Determines whether Buy, Sell, or Hold conditions are met
+- Submits execution transactions to agent vault contracts
+- Pays gas fees on behalf of users
+- Tracks execution status using RPC and Polygonscan APIs
+
+The trading server cannot withdraw user funds or bypass on-chain limits enforced by the smart contracts.
 1. Ensure the `TRADING_WALLET_PRIVATE_KEY` is set in your `.env`.
 2. Start the trading server:
    ```bash
    node server/trading-server.js
    ```
 
+### Infrastructure Notes
+
+ClawTrader uses **Neon**, a serverless PostgreSQL database, for fast and scalable agent indexing, trade history storage, and UI synchronization.
+
+Blockchain reads (such as transaction status and confirmations) are supported via the **Etherscan / Polygonscan API**, complementing direct RPC calls for reliability and observability.
+
 ## License
 
-MIT License
+This project is licensed under the MIT License.
