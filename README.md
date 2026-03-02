@@ -27,7 +27,7 @@ If an execution condition is met, a restricted operator wallet submits the trade
 
 At no point does the trading server custody user funds. All assets remain locked inside user-owned smart contract vaults, and execution is strictly limited by on-chain rules.
 
-All tradings are performed using USDC as the base currency. tBTC,tETH,tSOL are traded as an intermediate asset, but profits are always realized and withdrawable in USDC.
+All tradings are performed using USDC as the base currency. TBTC,TETH are traded as an intermediate asset, but profits are always realized and withdrawable in USDC.
 
 ```mermaid
 sequenceDiagram
@@ -91,8 +91,8 @@ All core platform operations are secured on the Polygon Amoy testnet. The operat
 | ClawToken | `0x9b5e9a452617ac8e9c280edf0a50cb089a456981` | Platform ERC-20 token |
 | SimpleDEX | `0x7f09C84a42A5f881d8cebC3c319DC108c20eE762` | Decentralized exchange for agent trades |
 | TestUSDC | `0xb045a5a95b592d701ce39100f4866a1168abd331` | Mintable test USDC used as base currency |
-| TestBTC | `0xebb1df177e9ceb8e95dbd775cf7a1fce51fe7fdd` | Test token for trading |
-| TestETH | `0x7f3997ec44746e81acbe4a764e49b4d23fbf8fd5` | Test token for trading |
+| TBTC | `0xebb1df177e9ceb8e95dbd775cf7a1fce51fe7fdd` | Test token for trading |
+| TETH | `0x7f3997ec44746e81acbe4a764e49b4d23fbf8fd5` | Test token for trading |
 
 ## Local Development
 
