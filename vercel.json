@@ -2,11 +2,11 @@
     "rewrites": [
         {
             "source": "/api/trading/:path*",
-            "destination": "https://clawtrader-pol-production.up.railway.app/api/:path*"
+            "destination": "https://clawtrader-n52qt.ondigitalocean.app/api/:path*"
         },
         {
             "source": "/api/health/trading",
-            "destination": "https://clawtrader-pol-production.up.railway.app/health"
+            "destination": "https://clawtrader-n52qt.ondigitalocean.app/health"
         },
         {
             "source": "/(.*)",
