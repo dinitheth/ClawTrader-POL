@@ -2,11 +2,11 @@
     "rewrites": [
         {
             "source": "/api/trading/:path*",
-            "destination": "http://155.138.211.208:3001/api/:path*"
+            "destination": "https://clawtrader-pol-production.up.railway.app/api/:path*"
         },
         {
             "source": "/api/health/trading",
-            "destination": "http://155.138.211.208:3001/health"
+            "destination": "https://clawtrader-pol-production.up.railway.app/health"
         },
         {
             "source": "/(.*)",
