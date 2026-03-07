@@ -38,7 +38,7 @@ sequenceDiagram
     Trading Server->>Crypto Market: Scans indicators every 30s
     Trading Server-->>Trading Server: Evaluates agent parameters
     Trading Server->>Agent Vault: Operator triggers execution
-    Agent Vault->>Crypto Market: Executes trade with user's USDC
+    Agent Vault->>Crypto Market: Executes trade with USDC
 ```
 
 ---
